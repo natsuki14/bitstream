@@ -25,7 +25,6 @@ module BitStream
 
       (@bit_width / 8).times do |i|
         value <<= 8
-        p s, byteoffset
         value |= s[i + byteoffset].unpack('C')[0]
       end
       return [value, @bit_width]
@@ -39,12 +38,19 @@ module BitStream
         throw "#{self.class.name} has not supported non-byte-aligned fields yet."
       end
 
-      index = 0
+      i = 0
+      tail = ""
       while value != 0
-        s[byteoffset + @bit_width / 8 + index] = [value & 0xff].pack('C')
+        index = byteoffset + @bit_width / 8 + i - 1
+        if s.bytesize <= index
+          tail.insert(0, [value & 0xff].pack('C'))
+        else
+          s[index] = [value & 0xff].pack('C')
+        end
         value >>= 8
-        index -= 1
+        i -= 1
       end
+      s << tail
     end
 
   end
