@@ -24,4 +24,15 @@ class TestUint < Test::Unit::TestCase
     assert_equal(32, len)
   end
 
+  def test_uint1_offset1_read
+    type = BitStream::UnsignedInt.new(1)
+    val, len = type.read("\x40", 1)
+    assert_equal(1, val)
+    assert_equal(1, len)
+
+    val, len = type.read("\xfd", 6)
+    assert_equal(0, val)
+    assert_equal(1, len)
+  end
+
 end

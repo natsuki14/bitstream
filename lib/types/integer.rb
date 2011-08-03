@@ -23,7 +23,7 @@ module BitStream
         value |= s[i + byteoffset].unpack('C')[0]
       end
       value &= ~(-1 << (bytelength * 8 - bitoffset))
-      value >>= (@bit_width - bitoffset) % 8
+      value >>= (8 - (@bit_width + bitoffset) % 8) % 8
 
       return [value, @bit_width]
     end
