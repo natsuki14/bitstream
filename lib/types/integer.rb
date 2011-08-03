@@ -13,20 +13,18 @@ module BitStream
     end
 
     def read(s, offset)
-      # TODO: Support non-byte-aligned fields.
-
       value = 0
       byteoffset = offset / 8
       bitoffset  = offset % 8
+      bytelength = (@bit_width + bitoffset + 7) / 8
 
-      if bitoffset != 0
-        throw "#{self.class.name} has not supported non-byte-aligned fields yet."
-      end
-
-      (@bit_width / 8).times do |i|
+      bytelength.times do |i|
         value <<= 8
         value |= s[i + byteoffset].unpack('C')[0]
       end
+      value &= ~(-1 << (bytelength * 8 - bitoffset))
+      value >>= (@bit_width - bitoffset) % 8
+
       return [value, @bit_width]
     end
 

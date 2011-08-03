@@ -19,8 +19,8 @@ class TestUint < Test::Unit::TestCase
 
   def test_uint32_offset4_read
     type = BitStream::UnsignedInt.new(32)
-    val, len = type.read("\x01\x02\x03\x04\x05", 4)
-    assert_equal(0x10203040, val)
+    val, len = type.read("\xf1\x02\x03\x04\x05", 4)
+    assert_equal(0x10203040.to_s(16), val.to_s(16))
     assert_equal(32, len)
   end
 
