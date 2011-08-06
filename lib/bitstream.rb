@@ -1,4 +1,5 @@
 require 'types/integer'
+require 'types/cstring'
 
 module BitStream
 
@@ -22,10 +23,12 @@ module BitStream
           @value, @length = @type.read(@raw_data, @offset)
         end
       end
+      STDERR.puts "Return the value \"#{@value}\""
       return @value
     end
 
     attr_reader :length, :value
+    attr_accessor :type # For debugging.
     attr_accessor :offset
 
   end
@@ -69,7 +72,8 @@ module BitStream
         begin
           STDERR.puts "Resuming the fiber."
           props.fibers[0].resume
-        rescue FiberError
+        rescue FiberError => e
+          STDERR.puts "Caught a FiberError (#{e.to_s})."
           props.fibers.shift
         end
       end
@@ -81,6 +85,7 @@ module BitStream
     def self.add_type(type, name = nil)
       if type.respond_to?(:each)
         type.each do |t|
+          STDERR.puts "Recursive add_type (#{t})."
           add_type(t)
         end
         return
@@ -98,7 +103,7 @@ module BitStream
 
       define_method(name) do |*args|
         name = args.shift.intern
-        puts "uint32 field (#{name}) was called with mode #{@mode}."
+        puts "A field (#{name}@#{type}) was called with mode #{@mode}."
         
         if respond_to? name
           throw "#{name} has already defined."
@@ -110,7 +115,7 @@ module BitStream
         case props.mode
         when :field_def
           STDERR.puts "Generated a new value."
-          field = Value.new(UnsignedInt.new(*args), props.raw_data)
+          field = Value.new(type.new(*args), props.raw_data)
           fields[name] = field
           
           STDERR.puts "Defined field \"#{name}\""
@@ -121,6 +126,7 @@ module BitStream
             if fields[name_].value.nil?
               self.class.read(name_, self)
             end
+            STDERR.puts "type(#{name_})=#{fields[name_].type}"
             fields[name_].value
           end
         
@@ -143,7 +149,7 @@ module BitStream
       end
     end
 
-    add_type [UnsignedInt]
+    add_type [UnsignedInt, Cstring]
 
     def create(s)
       klass = Class.new(self)
@@ -154,8 +160,17 @@ module BitStream
 
     def method_missing(name, *args)
       # TODO: Support methods like "int16" "uint1"
+      super name, args
     end
 
+    #def read(s, offset)
+    #  new s, offset
+    #end
+    
+    #def write(s, offset, data)
+      # TODO: Implement me.
+    #end
+    
   end
 
   def self.included(obj)
@@ -163,9 +178,9 @@ module BitStream
     obj.initialize_for_class_methods
   end
 
-  def initialize(s)
+  def initialize(s, offset = 0)
     props = Properties.new
-    props.curr_offset = 0
+    props.curr_offset = offset
     props.fields = {}
     props.raw_data = s
     props.fibers = []
