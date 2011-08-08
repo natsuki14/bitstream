@@ -2,6 +2,14 @@ module BitStream
 
   class UnsignedInt
 
+    @instances = Hash.new do |hash, key|
+      hash[key] = new key
+    end
+
+    def self.instance(bit_width)
+      @instances[bit_width]
+    end
+
     attr_reader :bit_width
 
     def initialize(bit_width)

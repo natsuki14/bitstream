@@ -2,6 +2,12 @@ module BitStream
 
   class Cstring
 
+    @instance = new
+
+    def self.instance
+      @instance
+    end
+
     def fixed_length?
       false
     end

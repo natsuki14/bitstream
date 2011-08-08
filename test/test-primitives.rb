@@ -8,7 +8,7 @@ class SimpleInt
   fields {
     unsigned_int "u1", 32
     unsigned_int :u2, 32
-    cstring      "cs1", 6
+    cstring      "cs1"
     unsigned_int "u3", 1
     unsigned_int "u4", 7
   }
