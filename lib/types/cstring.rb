@@ -22,10 +22,9 @@ module BitStream
         byteindex += 1
       end while byte != 0
 
-      bytelen = val.size
+      val.size
       val.slice!(val.size - 1)
-      STDERR.puts "Value is #{val}."
-      return [val, 8 * bytelen]
+      return [val, 8 * val.size]
     end
 
     def write(s, offset, data)
