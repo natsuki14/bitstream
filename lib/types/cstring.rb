@@ -24,7 +24,6 @@ module BitStream
 
       bytelen = val.size
       val.slice!(val.size - 1)
-      STDERR.puts "Value is #{val}."
       return [val, 8 * bytelen]
     end
 

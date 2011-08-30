@@ -1,5 +1,17 @@
 require 'types/string-utils'
 
+# Used to debug.
+#class String
+#  def to_bin
+#    ret = ''
+#    each_byte do |byte|
+#      ret << byte.to_s(2)
+#    end
+#    ret = '0' * (8 - ret.size % 8) + ret if ret.size % 8 != 0
+#    ret
+#  end
+#end
+
 module BitStream
 
   class String
@@ -26,7 +38,15 @@ module BitStream
     def write(s, offset, data)
       head = offset / 8
       tail = (offset + @byte_len * 8 + 7) / 8
-      s[head...tail] = data
+      if offset % 8 != 0
+        bitoffset = offset % 8
+        Utils.bit_rshift(data, bitoffset)
+        s[head] = ((data[0].ord & 0xff >> bitoffset) | (s[head].ord & 0xff << (8 - bitoffset))).chr
+        s[tail - 1] = (data[data.size - 1].ord & 0xff << (8 - bitoffset)).chr
+        s[(head + 1)..(tail - 2)] = data[1..(data.size - 2)]
+      else
+        s[head...tail] = data
+      end
       return s
     end
 

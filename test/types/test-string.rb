@@ -31,8 +31,8 @@ class TestString < Test::Unit::TestCase
     ret = type.write(val, 7, "\xcd\xef")
     assert_equal(val, ret)
 
-    assert_equal("\x13\x9b", val[0...1])
-    assert(val[2].unpack('C')[0] & 0xfe == 0xde)
+    assert_equal("\x13\x9b", val[0..1])
+    assert(val[2].ord & 0xfe == 0xde)
   end
 
 end
