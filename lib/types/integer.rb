@@ -21,6 +21,7 @@ module BitStream
     end
 
     def read(s, offset)
+      puts "#{s.inspect} #{offset}"
       value = 0
       byteoffset = offset / 8
       bitoffset  = offset % 8

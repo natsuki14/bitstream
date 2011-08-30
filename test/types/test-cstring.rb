@@ -7,7 +7,7 @@ class TestCstring < Test::Unit::TestCase
     type = BitStream::Cstring.new
     val, len = type.read("foobar\0baz", 16)
     assert_equal("obar", val)
-    assert_equal(8 * "obar".size, len)
+    assert_equal(8 * "obar\0".size, len)
   end
 
 end
