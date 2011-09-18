@@ -1,5 +1,6 @@
 require 'types/integer'
 require 'types/cstring'
+require 'types/character'
 
 module BitStream
 
@@ -178,7 +179,7 @@ module BitStream
       ClassMethods.add_type(type, name, self.singleton_class)
     end
 
-    add_type [UnsignedInt, Cstring]
+    add_type [UnsignedInt, Cstring, Char]
 
     def create(s, offset = 0)
       klass = Class.new(self)
