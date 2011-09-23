@@ -33,5 +33,14 @@ class TestCondition < Test::Unit::TestCase
     end
   end
 
+  def test_condition_false_with_dummy
+    ConditionSample.create "\x00\x00\x00\x00\x00\x00\x00\x01" # dummy
+    spec = ConditionSample.create "\x00\x00\x00\x01\x00\x00\x00\x01"
+    assert_equal(1, spec.u1)
+    assert_raise(NoMethodError) do
+      spec.u2
+    end
+  end
+  
 end
 

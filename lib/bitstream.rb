@@ -74,7 +74,7 @@ module BitStream
           #STDERR.puts "Resuming the fiber."
           props.fibers[0].resume
         rescue FiberError => e
-          STDERR.puts "Caught a FiberError (#{e.to_s})."
+          #STDERR.puts "Caught a FiberError (#{e.to_s})."
           props.fibers.shift
         end
       end
@@ -119,13 +119,16 @@ module BitStream
         name = name.intern
       end
 
+      @types = {} if @types.nil?
+      @types[name] = type
+
       bs.instance_eval do
         define_method(name) do |*args|
           name = args.shift.intern
           #puts "A field (#{name}@#{type}) was called with mode #{@mode}, self #{self}, args #{args}."        
-          if respond_to? name
-            throw "#{name} has already defined."
-          end
+          #if respond_to? name
+          #  throw "#{name} has already defined."
+          #end
           
           props = @instance.bitspec_properties
           fields = props.fields
@@ -153,10 +156,11 @@ module BitStream
               #STDERR.puts "type(#{name_})=#{fields[name_].type}"
               fields[name_].value
             end
-            
-            @instance.class.singleton_class.instance_eval do
-              define_method name do
-                instance.send(name)
+
+            instance = @instance
+            singleton_class.instance_eval do
+              define_method name_ do
+                instance.send(name_)
               end
             end
           
@@ -174,7 +178,49 @@ module BitStream
         end
       end
     end
- 
+
+    def dyn_array(name, type, *type_args)
+      name = name.intern if name.respond_to? :intern
+      type = type.intern if type.respond_to? :intern
+      
+      props = @instance.bitspec_properties
+      fields = props.fields
+      name_ = name
+      case props.mode
+      when :field_def
+        define_method name do
+          if fields[name_].nil?
+            fields[name_] = []
+            self.class.index_all_fields(instance)
+          end
+          fields[name_].map do |el|
+            el.read
+          end
+        end
+
+        p self.singleton_class
+        @instance.class.singleton_class.instance_eval do
+          define_method name do
+            fields[name_]
+          end
+        end
+      when :read
+        type_instance = @types[type]
+        unless type_instance.respond_to? :read
+          type_instance = type_instance.instance *type_args
+        end
+        val = Value.new type_instance, props.raw_data
+        fields[name] << val
+        val.offset = props.curr_offset
+        val.read if val.length.nil?
+        props.curr_offset += val.length
+        
+        #STDERR.puts "Calculate offset of the field \"#{name}\". The offset is #{fields[name].offset}"
+        
+        Fiber.yield
+      end
+    end
+
     def add_type(type, name = nil)
       ClassMethods.add_type(type, name, self.singleton_class)
     end

@@ -6,9 +6,9 @@ class DynArraySample
   include BitStream
 
   fields {
-    dyn_array :char, :a1
+    dyn_array :a1, :char
     while a1.last != "\0"
-      dyn_array :char, :a1
+      dyn_array :a1, :char
     end
   }
 
