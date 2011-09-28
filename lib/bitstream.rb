@@ -60,7 +60,7 @@ module BitStream
       end
     end
 
-    def read_one_field(name, instance)
+    def read_one_field(value, instance)
       #STDERR.puts "Try to read the field \"#{name}\""
       props = instance.bitspec_properties
       @instance = instance
@@ -68,7 +68,7 @@ module BitStream
       props.mode = :read
 
       #p props.fields[name]
-      while props.fields[name].offset.nil?
+      while value.offset.nil?
         # TODO: Add an error handler.
         begin
           #STDERR.puts "Resuming the fiber."
@@ -78,7 +78,7 @@ module BitStream
           props.fibers.shift
         end
       end
-      props.fields[name].read
+      value.read
 
       props.mode = recent_mode
     end
@@ -119,6 +119,7 @@ module BitStream
         name = name.intern
       end
 
+      p self
       @types = {} if @types.nil?
       @types[name] = type
 
@@ -151,7 +152,7 @@ module BitStream
             define_method name do
               #STDERR.puts "Read the field \"#{name_}\""
               if fields[name_].value.nil?
-                self.class.read_one_field(name_, self)
+                self.class.read_one_field(field, self)
               end
               #STDERR.puts "type(#{name_})=#{fields[name_].type}"
               fields[name_].value
@@ -182,6 +183,7 @@ module BitStream
     def dyn_array(name, type, *type_args)
       name = name.intern if name.respond_to? :intern
       type = type.intern if type.respond_to? :intern
+      p self
       type = @types[type]
       if type.respond_to? :read
         throw "#{type} does not accept any arguments." unless type_args.empty?
@@ -204,6 +206,7 @@ module BitStream
         name_ = name
         
         define_method name do
+          # TODO: Stop checking fields other than the last field. 
           fields[name_].map do |el|
             if el.value.nil?
               self.class.read_one_field(field, instance)
@@ -219,18 +222,15 @@ module BitStream
           end
         end
       when :read
-        type_instance = @types[type]
-        unless type_instance.respond_to? :read
-          type_instance = type_instance.instance *type_args
+        # Get the current field.
+        value = fields.find do |el|
+          el.value.nil?
         end
-        val = Value.new type_instance, props.raw_data
-        fields[name] << val
-        val.offset = props.curr_offset
-        val.read if val.length.nil?
-        props.curr_offset += val.length
-        
-        #STDERR.puts "Calculate offset of the field \"#{name}\". The offset is #{fields[name].offset}"
-        
+
+        value.offset = props.curr_offset
+        value.read if value.length.nil?
+        props.curr_offset += value.length
+
         Fiber.yield
       end
     end
