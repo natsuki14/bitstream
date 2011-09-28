@@ -100,6 +100,10 @@ module BitStream
       props.mode = recent_mode
     end
 
+    def self.types
+      @types
+    end
+
     def self.add_type(type, name = nil, bs = self)
       if type.respond_to?(:each)
         type.each do |t|
@@ -266,7 +270,7 @@ module BitStream
 
   def self.included(obj)
     obj.extend ClassMethods
-    obj.initialize_for_class_methods
+    obj.initialize_for_class_methods(ClassMethods.fields)
   end
 
   def initialize(s, offset = 0)
