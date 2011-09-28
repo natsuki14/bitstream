@@ -182,26 +182,40 @@ module BitStream
     def dyn_array(name, type, *type_args)
       name = name.intern if name.respond_to? :intern
       type = type.intern if type.respond_to? :intern
-      
+      type = @types[type]
+      if type.respond_to? :read
+        throw "#{type} does not accept any arguments." unless type_args.empty?
+        type_instance = type
+      else
+        type_instance = type.instance *type_args
+      end
+
       props = @instance.bitspec_properties
       fields = props.fields
       name_ = name
       case props.mode
       when :field_def
+        if fields[name_].nil?
+          fields[name_] = []
+        end
+        field = Value.new(type_instance, props.raw_data)
+        fields << field
+
+        name_ = name
+        
         define_method name do
-          if fields[name_].nil?
-            fields[name_] = []
-            self.class.index_all_fields(instance)
-          end
           fields[name_].map do |el|
-            el.read
+            if el.value.nil?
+              self.class.read_one_field(field, instance)
+            end
+            el.value
           end
         end
 
-        p self.singleton_class
-        @instance.class.singleton_class.instance_eval do
+        instance = @instance
+        singleton_class.instance_eval do
           define_method name do
-            fields[name_]
+            instance.send(name_)
           end
         end
       when :read
