@@ -36,10 +36,11 @@ module BitStream
 
   module ClassMethods
 
-    def initialize_for_class_methods
+    def initialize_for_class_methods(types)
       @field_defs = []
       @field_array = []
       @fields = {}
+      @types = types.dup
       @index = 0
     end
 
@@ -74,7 +75,7 @@ module BitStream
           #STDERR.puts "Resuming the fiber."
           props.fibers[0].resume
         rescue FiberError => e
-          #STDERR.puts "Caught a FiberError (#{e.to_s})."
+          STDERR.puts "Caught a FiberError (#{e.to_s})."
           props.fibers.shift
         end
       end
@@ -123,7 +124,6 @@ module BitStream
         name = name.intern
       end
 
-      p self
       @types = {} if @types.nil?
       @types[name] = type
 
@@ -187,8 +187,8 @@ module BitStream
     def dyn_array(name, type, *type_args)
       name = name.intern if name.respond_to? :intern
       type = type.intern if type.respond_to? :intern
-      p self
       type = @types[type]
+
       if type.respond_to? :read
         throw "#{type} does not accept any arguments." unless type_args.empty?
         type_instance = type
@@ -205,18 +205,34 @@ module BitStream
           fields[name_] = []
         end
         field = Value.new(type_instance, props.raw_data)
-        fields << field
+        fields[name_] << field
 
         name_ = name
+        instance = @instance
         
         define_method name do
-          # TODO: Stop checking fields other than the last field. 
-          fields[name_].map do |el|
-            if el.value.nil?
+          # TODO: Stop checking fields other than the last field.
+          #STDERR.puts "Reading #{self.class}\##{name_}"
+          #fields[name_].map do |el|
+          #  p el
+          #  if el.value.nil?
+          #    STDERR.puts "Calling read_one_field"
+          #    self.class.read_one_field(field, instance)
+          #    STDERR.puts "Return from read_one_field"
+          #  end
+          #  p el.value
+          #  el.value
+          #end
+          ret = []
+          fields[name_].each do |el|
+            if @bitspec_properties.mode == :field_def
               self.class.read_one_field(field, instance)
+              ret << el.value
+            else
+              ret << el.value unless el.value.nil?
             end
-            el.value
           end
+          return ret
         end
 
         instance = @instance
@@ -227,7 +243,7 @@ module BitStream
         end
       when :read
         # Get the current field.
-        value = fields.find do |el|
+        value = fields[name].find do |el|
           el.value.nil?
         end
 
@@ -270,7 +286,7 @@ module BitStream
 
   def self.included(obj)
     obj.extend ClassMethods
-    obj.initialize_for_class_methods(ClassMethods.fields)
+    obj.initialize_for_class_methods(ClassMethods.types)
   end
 
   def initialize(s, offset = 0)
