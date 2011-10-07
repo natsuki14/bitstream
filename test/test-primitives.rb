@@ -11,6 +11,7 @@ class SimpleInt
     cstring      "cs1"
     unsigned_int "u3", 1
     unsigned_int "u4", 7
+    string       :s1, 8 * 3
   }
 
 end
@@ -18,7 +19,7 @@ end
 class TestSimpleInt < Test::Unit::TestCase
 
   def setup
-    @spec = SimpleInt.create "\x10\x20\x30\x40\x50\x60\x70\x80foobar\00\xfe\x00"
+    @spec = SimpleInt.create "\x10\x20\x30\x40\x50\x60\x70\x80foobar\00\xfebazdummy"
   end
 
   def test_u1
@@ -39,6 +40,10 @@ class TestSimpleInt < Test::Unit::TestCase
 
   def test_cs1
     assert_equal("foobar", @spec.cs1)
+  end
+
+  def test_s1
+    assert_equal("baz", @spec.s1)
   end
 
 end

@@ -20,6 +20,10 @@ module BitStream
       @byte_len = byte_len
     end
 
+    def self.instance(bit_width)
+      new(bit_width / 8)
+    end
+
     def fixed_length?
       true
     end

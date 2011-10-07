@@ -1,4 +1,5 @@
 require 'types/integer'
+require 'types/string'
 require 'types/cstring'
 require 'types/character'
 
@@ -142,10 +143,10 @@ module BitStream
           when :field_def
             #STDERR.puts "Generated a new value."
             #p types
-            unless type.respond_to? :read
-              type_instance = type.instance(*args)
-            else
+            if type.respond_to? :read
               type_instance = type
+            else
+              type_instance = type.instance(*args)
             end
             field = Value.new(type_instance, props.raw_data)
             fields[name] = field
@@ -259,7 +260,7 @@ module BitStream
       ClassMethods.add_type(type, name, self.singleton_class)
     end
 
-    add_type [UnsignedInt, Cstring, Char]
+    add_type [UnsignedInt, Cstring, String, Char]
 
     def create(s, offset = 0)
       klass = Class.new(self)
