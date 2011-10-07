@@ -15,7 +15,7 @@ class DynArraySample
 end
 
 
-class TestSimpleInt < Test::Unit::TestCase
+class TestDynArray < Test::Unit::TestCase
 
   def setup
     @spec = DynArraySample.create "foobar\0"
