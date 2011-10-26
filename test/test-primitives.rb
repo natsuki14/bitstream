@@ -11,7 +11,7 @@ class SimpleInt
     cstring      "cs1"
     unsigned_int "u3", 1
     unsigned_int "u4", 7
-    string       :s1, 8 * 3
+    string       :s1, 3
   }
 
 end

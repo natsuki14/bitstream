@@ -20,13 +20,8 @@ module BitStream
       @byte_len = byte_len
     end
 
-    def self.instance(bit_width)
-      if bit_width % 8 != 0
-        raise ArgumentError,
-              "The width of a string field shall be multiple of 8 " \
-              "but is #{bit_width}"
-      end
-      new(bit_width / 8)
+    def self.instance(byte_len)
+      new byte_len
     end
 
     def fixed_length?

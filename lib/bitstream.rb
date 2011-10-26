@@ -5,8 +5,28 @@ require 'types/character'
 
 module BitStream
 
+  class BitStreamError < Exception
+  end
+
   class Properties
     attr_accessor :curr_offset, :fields, :fibers, :mode, :raw_data, :initial_offset
+  end
+
+  module Utils
+
+    def self.class2symbol(type)
+      name = type.name.split("::").last
+      name = self.camel2snake(name).intern
+    end
+
+    def self.camel2snake(camel)
+      snake = camel.dup
+      snake[0] = snake[0].downcase
+      snake.gsub(/[A-Z]/) do |s|
+        "_" + s.downcase
+      end
+    end
+
   end
 
   class Value
@@ -116,13 +136,7 @@ module BitStream
       end
 
       if name.nil?
-        # Convert camel-case to underscore-separated.
-        name = type.name.split("::").last
-        name[0] = name[0].downcase
-        name.gsub!(/[A-Z]/) do |s|
-          "_" + s.downcase
-        end
-        name = name.intern
+        name = Utils.class2symbol type
       end
 
       @types = {} if @types.nil?
@@ -185,13 +199,19 @@ module BitStream
       end
     end
 
-    def dyn_array(name, type, *type_args)
+    def dyn_array(name, type_name, *type_args)
       name = name.intern if name.respond_to? :intern
-      type = type.intern if type.respond_to? :intern
-      type = @types[type]
+      type_name = type_name.intern if type_name.respond_to? :intern
+      type = @types[type_name]
+
+      if type.nil?
+        raise BitStreamError, "There is no type named \"#{type_name}\""
+      end
 
       if type.respond_to? :read
-        throw "#{type} does not accept any arguments." unless type_args.empty?
+        unless type_args.empty?
+          raise BitStreamError, "#{type} does not accept any arguments."
+        end
         type_instance = type
       else
         type_instance = type.instance *type_args
@@ -212,18 +232,6 @@ module BitStream
         instance = @instance
         
         define_method name do
-          # TODO: Stop checking fields other than the last field.
-          #STDERR.puts "Reading #{self.class}\##{name_}"
-          #fields[name_].map do |el|
-          #  p el
-          #  if el.value.nil?
-          #    STDERR.puts "Calling read_one_field"
-          #    self.class.read_one_field(field, instance)
-          #    STDERR.puts "Return from read_one_field"
-          #  end
-          #  p el.value
-          #  el.value
-          #end
           ret = []
           fields[name_].each do |el|
             if @bitspec_properties.mode == :field_def
@@ -257,6 +265,11 @@ module BitStream
     end
 
     def add_type(type, name = nil)
+      if name.nil?
+        name = Utils.class2symbol(type)
+      end
+      puts "Add #{type.name} as #{name}"
+      @types[name] = type
       ClassMethods.add_type(type, name, self.singleton_class)
     end
 

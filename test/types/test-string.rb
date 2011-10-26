@@ -3,21 +3,6 @@ require 'types/string'
 
 class TestString < Test::Unit::TestCase
 
-  def test_instance
-    10.times do |i|
-      assert_nothing_raised do
-        BitStream::String.instance(8 * i)
-      end
-      assert_raise(ArgumentError) do 
-        BitStream::String.instance(8 * i + 1)
-      end
-      assert_raise(ArgumentError) do 
-        BitStream::String.instance(8 * i + 7)
-      end
-    end
-
-  end
-
   def test_aligned_read
     type = BitStream::String.new(3)
     val, len = type.read("foobarbaz", 16)
