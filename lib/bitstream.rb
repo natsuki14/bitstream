@@ -125,23 +125,25 @@ module BitStream
     def self.types
       @types
     end
-
-    def self.add_type(type, name = nil, bs = self)
-      if type.respond_to?(:each)
-        type.each do |t|
-          #STDERR.puts "Recursive add_type (#{t})."
-          add_type(t, nil, bs)
-        end
-        return
+    
+    def self.register_types(types)
+      types.each do |t|
+        register_type(t, nil)
       end
-
+    end
+    
+    def self.register_type(type, name = nil)
       if name.nil?
         name = Utils.class2symbol type
       end
-
+      
       @types = {} if @types.nil?
       @types[name] = type
+      
+      add_type(type, name, self)
+    end
 
+    def self.add_type(type, name = nil, bs = self)
       bs.instance_eval do
         define_method(name) do |*args|
           name = args.shift.intern
@@ -273,7 +275,7 @@ module BitStream
       ClassMethods.add_type(type, name, self.singleton_class)
     end
 
-    add_type [UnsignedInt, Cstring, String, Char]
+    register_types [UnsignedInt, Cstring, String, Char]
 
     def create(s, offset = 0)
       klass = Class.new(self)
