@@ -9,7 +9,7 @@ module BitStream
   end
 
   class Properties
-    attr_accessor :curr_offset, :fields, :fibers, :mode, :raw_data, :initial_offset
+    attr_accessor :curr_offset, :fields, :fibers, :mode, :raw_data, :initial_offset, :user_props
   end
 
   module Utils
@@ -141,6 +141,10 @@ module BitStream
       @types[name] = type
       
       add_type(type, name, self)
+    end
+
+    def props
+      @instance.bitspec_properties.user_props
     end
 
     def self.add_type(type, name = nil, bs = self)
@@ -277,9 +281,14 @@ module BitStream
 
     register_types [UnsignedInt, Cstring, String, Char]
 
-    def create(s, offset = 0)
+    def create(s, *props)
+      create_with_offset(s, 0, *props)
+    end
+
+    def create_with_offset(s, offset, *props)
       klass = Class.new(self)
       instance = klass.new(s, offset)
+      instance.bitspec_properties.user_props = props
       initialize_instance(s, instance)
       return instance
     end
@@ -290,7 +299,7 @@ module BitStream
     #end
 
     def read(s, offset)
-      instance = create s, offset
+      instance = create_with_offset(s, offset)
       [instance, instance.length]
     end
     
@@ -319,6 +328,10 @@ module BitStream
     self.class.index_all_fields(self)
     props = @bitspec_properties
     props.curr_offset - props.initial_offset
+  end
+
+  def properties=(props)
+    # Method to override.
   end
 
   attr_accessor :bitspec_properties
