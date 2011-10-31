@@ -205,6 +205,67 @@ module BitStream
       end
     end
 
+    def array(name, size, type_name, *type_args)
+      name = name.intern if name.respond_to? :intern
+      type_name = type_name.intern if type_name.respond_to? :intern
+      type = @types[type_name]
+
+      if type.nil?
+        raise BitStreamError, "There is no type named \"#{type_name}\""
+      end
+
+      if type.respond_to? :read
+        unless type_args.empty?
+          raise BitStreamError, "#{type} does not accept any arguments."
+        end
+        type_instance = type
+      else
+        type_instance = type.instance *type_args
+      end
+
+      props = @instance.bitspec_properties
+      fields = props.fields
+      name_ = name
+      case props.mode
+      when :field_def
+        fields[name_] = []
+        size.times do
+          field = Value.new(type_instance, props.raw_data)
+          # TODO: Replace with a proxy.
+          fields[name_] << field
+        end
+
+        instance = @instance
+
+        define_method name do
+          # TODO: Replace with a proxy.
+          if !fields[name_].empty? && fields[name_][0].value.nil?
+            self.class.read_one_field(fields[name_][0], instance)
+          end
+
+          fields[name_].map do |el|
+            el.value
+          end
+        end
+
+        singleton_class.instance_eval do
+          define_method name do
+            instance.send(name_)
+          end
+        end
+      when :read
+        size.times do |i|
+          value = fields[name][i]
+
+          value.offset = props.curr_offset
+          value.read if value.length.nil?
+          props.curr_offset += value.length
+        end
+
+        Fiber.yield
+      end
+    end
+
     def dyn_array(name, type_name, *type_args)
       name = name.intern if name.respond_to? :intern
       type_name = type_name.intern if type_name.respond_to? :intern
