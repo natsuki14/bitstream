@@ -6,7 +6,7 @@ class ArraySample
   include BitStream
 
   fields do
-    array :a1, 5, :unsigned_int, 16, 
+    array :a1, 5, :unsigned_int, 16
   end
 
 end

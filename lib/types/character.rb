@@ -1,12 +1,18 @@
 module BitStream
 
   class Char
+
+    @instance = new
+
+    def self.instance
+      @instance
+    end
   
-    def self.fixed_length?
+    def fixed_length?
       true
     end
 
-    def self.read(s, offset)
+    def read(s, offset)
       byteoffset = offset / 8
       bitoffset  = offset % 8
 
@@ -15,8 +21,10 @@ module BitStream
       return [value, 8]
     end
 
-    def self.write(s, offset, value)
+    def write(s, offset, value)
     end
+
   end
+
 end
 

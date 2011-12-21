@@ -1,3 +1,5 @@
+require 'random-accessible'
+
 require 'types/integer'
 require 'types/string'
 require 'types/cstring'
@@ -10,6 +12,42 @@ module BitStream
 
   class Properties
     attr_accessor :curr_offset, :fields, :fibers, :mode, :raw_data, :initial_offset, :user_props
+  end
+
+  class ArrayProxy
+
+    include RandomAccessible
+
+    def initialize(instance, bitstream_class)
+      @fields = []
+      @instance = instance
+      @bitstream_class = bitstream_class
+    end
+
+    def add_field(field)
+      @fields << field
+    end
+
+    def get_field(pos)
+      @fields[pos]
+    end
+
+    def read_access(pos)
+      field = @fields[pos]
+      if field.value.nil?
+        @instance.class.read_one_field(field, @instance)
+      end
+      return field.value
+    end
+
+    def write_access(pos, val)
+      self
+    end
+
+    def shrink(n)
+      @fields.pop(n)
+    end
+
   end
 
   module Utils
@@ -220,7 +258,7 @@ module BitStream
         end
         type_instance = type
       else
-        type_instance = type.instance *type_args
+        type_instance = type.instance(*type_args)
       end
 
       props = @instance.bitspec_properties
@@ -228,24 +266,16 @@ module BitStream
       name_ = name
       case props.mode
       when :field_def
-        fields[name_] = []
+        fields[name_] = ArrayProxy.new(@instance, self.class)
         size.times do
           field = Value.new(type_instance, props.raw_data)
-          # TODO: Replace with a proxy.
-          fields[name_] << field
+          fields[name_].add_field(field)
         end
 
         instance = @instance
 
         define_method name do
-          # TODO: Replace with a proxy.
-          if !fields[name_].empty? && fields[name_][0].value.nil?
-            self.class.read_one_field(fields[name_][0], instance)
-          end
-
-          fields[name_].map do |el|
-            el.value
-          end
+          fields[name_]
         end
 
         singleton_class.instance_eval do
@@ -255,7 +285,8 @@ module BitStream
         end
       when :read
         size.times do |i|
-          value = fields[name][i]
+          # TODO: Implement delayed eval.
+          value = fields[name].get_field(i)
 
           value.offset = props.curr_offset
           value.read if value.length.nil?
