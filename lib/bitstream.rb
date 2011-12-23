@@ -10,9 +10,10 @@ module BitStream
   class BitStreamError < Exception
   end
 
-  class Properties
-    attr_accessor :curr_offset, :fields, :fibers, :mode, :raw_data, :initial_offset, :user_props, :eval_queue
-  end
+  Properties = Struct.new(
+    :curr_offset, :fields, :mode, :raw_data,
+    :initial_offset, :user_props, :eval_queue
+  )
 
   class ArrayProxy
 
@@ -20,6 +21,8 @@ module BitStream
 
     def initialize(instance)
       @fields = []
+      @values = []
+      @updated = []
       @instance = instance
       @size = 0
     end
@@ -34,27 +37,39 @@ module BitStream
     end
 
     def read_access(pos)
-      field = @fields[pos]
-      if field.value.nil?
-        @instance.class.read_one_field(field, @instance)
+      unless @updated[pos]
+        field = @fields[pos]
+        unless field.has_read?
+          @instance.class.read_one_field(field, @instance)
+        end
+        @values[pos] = field.value
+        @fields[pos] = nil
+        @updated[pos] = true
       end
-      return field.value
+      return @values[pos]
     end
 
     def write_access(pos, val)
-      self
+      @fields[pos] = nil
+      @values[pos] = val
+      @updated[pos] = true
     end
 
     def shrink(n)
       @fields.pop(n)
       @size -= n
+      dif = @values.size - @size
+      if dif > 0
+        @values.pop(dif)
+        @updated.pop(dif)
+      end
     end
 
     attr_reader :size
 
   end
 
-  # TODO: Use data structure that enqueue and dequeue in O(1).
+  # TODO: Use data structure that enqueues and dequeues in O(1).
   class Queue < Array
 
     alias :enq :push
@@ -85,15 +100,21 @@ module BitStream
       @type = type
       @raw_data = raw_data
       @length = @type.length if @type.respond_to? :length
+      @has_read = false
+    end
+
+    def has_read?
+      @has_read
     end
 
     def read
       #STDERR.puts "Reading... (offset: #{@offset})"
-      if @value.nil?
+      unless @has_read
         if @offset.nil?
           raise "Has not been set offset."
         else
           @value, @length = @type.read(@raw_data, @offset)
+          @has_read = true
         end
       end
       #STDERR.puts "Return the value \"#{@value}\""
@@ -101,11 +122,13 @@ module BitStream
     end
 
     def decide_length
+      # @length must not be nil if @has_read.
       if @length.nil?
         if @offset.nil?
           raise "Has not been set offset."
         else
           @value, @length = @type.read(@raw_data, @offset)
+          @has_read = true
         end
       end
       return @length
@@ -121,10 +144,10 @@ module BitStream
 
     def initialize_for_class_methods(types)
       @field_defs = []
-      @field_array = []
       @fields = {}
       @types = types.dup
       @index = 0
+      @bitstream_mutex = Mutex.new
     end
 
     def fields(&field_def)
@@ -133,21 +156,19 @@ module BitStream
 
     def initialize_instance(raw_data, instance)
       props = instance.bitspec_properties
-      @field_defs.each do |field_def|
-        props.fibers << Fiber.new(&field_def)
-      end
-      @instance = instance
       props.mode = :field_def
+      @bitstream_mutex.synchronize do
+        @instance = instance
 
-      @field_defs.each do |field_def|
-        field_def.call
+        @field_defs.each do |field_def|
+          field_def.call
+        end
       end
     end
 
     def read_one_field(value, instance)
       #STDERR.puts "Try to read the field \"#{name}\""
       props = instance.bitspec_properties
-      @instance = instance
       queue = props.eval_queue
 
       #p props.fields[name]
@@ -163,7 +184,6 @@ module BitStream
 
     def index_all_fields(instance)
       props = instance.bitspec_properties
-      @instance = instance
       queue = props.eval_queue
       
       queue.each do |field|
@@ -249,8 +269,8 @@ module BitStream
     end
 
     def array(name, size, type_name, *type_args)
-      name = name.intern if name.respond_to? :intern
-      type_name = type_name.intern if type_name.respond_to? :intern
+      name = name.intern
+      type_name = type_name.intern
       type = @types[type_name]
 
       if type.nil?
@@ -293,8 +313,8 @@ module BitStream
     end
 
     def dyn_array(name, type_name, *type_args)
-      name = name.intern if name.respond_to? :intern
-      type_name = type_name.intern if type_name.respond_to? :intern
+      name = name.intern
+      type_name = type_name.intern
       type = @types[type_name]
 
       if type.nil?
@@ -388,7 +408,6 @@ module BitStream
     props.curr_offset = offset
     props.fields = {}
     props.raw_data = s
-    props.fibers = []
     props.initial_offset = offset
     props.eval_queue = Queue.new
     @bitspec_properties = props
