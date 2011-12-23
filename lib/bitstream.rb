@@ -11,7 +11,7 @@ module BitStream
   end
 
   class Properties
-    attr_accessor :curr_offset, :fields, :fibers, :mode, :raw_data, :initial_offset, :user_props
+    attr_accessor :curr_offset, :fields, :fibers, :mode, :raw_data, :initial_offset, :user_props, :eval_queue
   end
 
   class ArrayProxy
@@ -47,6 +47,13 @@ module BitStream
     def shrink(n)
       @fields.pop(n)
     end
+
+  end
+
+  class Queue < Array
+
+    alias :enq :push
+    alias :deq :shift
 
   end
 
@@ -124,40 +131,44 @@ module BitStream
       #STDERR.puts "Try to read the field \"#{name}\""
       props = instance.bitspec_properties
       @instance = instance
-      recent_mode = props.mode
-      props.mode = :read
+      queue = props.eval_queue
 
       #p props.fields[name]
       while value.offset.nil?
+        field = queue.deq
+        field.offset = props.curr_offset
+        field.read if field.length.nil?
+        props.curr_offset += field.length
         # TODO: Add an error handler.
-        begin
+        #begin
           #STDERR.puts "Resuming the fiber."
-          props.fibers[0].resume
-        rescue FiberError => e
-          STDERR.puts "Caught a FiberError (#{e.to_s})."
-          props.fibers.shift
-        end
+        #  props.fibers[0].resume
+        #rescue FiberError => e
+        #  STDERR.puts "Caught a FiberError (#{e.to_s})."
+        #  props.fibers.shift
+        #end
       end
       value.read
-
-      props.mode = recent_mode
     end
 
     def index_all_fields(instance)
       props = instance.bitspec_properties
       @instance = instance
-      recent_mode = props.mode
-      props.mode = :read
-
-      until props.fibers.empty?
-        begin
-          props.fibers[0].resume
-        rescue FiberError
-          props.fibers.shift
-        end
+      queue = props.eval_queue
+      
+      queue.each do |field|
+        field.offset = props.curr_offset
+        field.read if field.length.nil?
+        props.curr_offset += field.length
       end
-
-      props.mode = recent_mode
+      queue.clear
+      #until props.fibers.empty?
+      #  begin
+      #    props.fibers[0].resume
+      #  rescue FiberError
+      #    props.fibers.shift
+      #  end
+      #end
     end
 
     def self.types
@@ -196,6 +207,7 @@ module BitStream
           
           props = @instance.bitspec_properties
           fields = props.fields
+          queue = props.eval_queue
           
           case props.mode
           when :field_def
@@ -208,6 +220,7 @@ module BitStream
             end
             field = Value.new(type_instance, props.raw_data)
             fields[name] = field
+            queue.enq(field)
             
             #STDERR.puts "Defined field \"#{name}\""
             name_ = name
@@ -263,6 +276,8 @@ module BitStream
 
       props = @instance.bitspec_properties
       fields = props.fields
+      queue = props.eval_queue
+
       name_ = name
       case props.mode
       when :field_def
@@ -270,6 +285,7 @@ module BitStream
         size.times do
           field = Value.new(type_instance, props.raw_data)
           fields[name_].add_field(field)
+          queue.enq(field)
         end
 
         instance = @instance
@@ -317,6 +333,7 @@ module BitStream
 
       props = @instance.bitspec_properties
       fields = props.fields
+      queue = props.eval_queue
       name_ = name
       case props.mode
       when :field_def
@@ -325,6 +342,7 @@ module BitStream
         end
         field = Value.new(type_instance, props.raw_data)
         fields[name_] << field
+        queue.enq(field)
 
         name_ = name
         instance = @instance
@@ -413,6 +431,7 @@ module BitStream
     props.raw_data = s
     props.fibers = []
     props.initial_offset = offset
+    props.eval_queue = Queue.new
     @bitspec_properties = props
   end
 
