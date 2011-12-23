@@ -16,16 +16,16 @@ module BitStream
 
   class String
 
-    def initialize(byte_len)
-      @byte_len = byte_len
-    end
-
     def self.instance(byte_len)
       new byte_len
     end
 
-    def fixed_length?
-      true
+    def initialize(byte_len)
+      @byte_len = byte_len
+    end
+
+    def length
+      @byte_len * 8
     end
 
     def read(s, offset)
@@ -51,7 +51,7 @@ module BitStream
       else
         s[head...tail] = data
       end
-      return s
+      return @byte_len * 8
     end
 
   end

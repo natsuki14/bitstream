@@ -8,8 +8,8 @@ module BitStream
       @instance
     end
 
-    def fixed_length?
-      false
+    def length
+      nil
     end
 
     def read(s, offset)

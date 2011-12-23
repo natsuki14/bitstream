@@ -16,9 +16,6 @@ module BitStream
       @bit_width = bit_width
     end
 
-    #def fixed_length?
-    #  true
-    #end
     def length
       @bit_width
     end

@@ -7,9 +7,9 @@ module BitStream
     def self.instance
       @instance
     end
-  
-    def fixed_length?
-      true
+
+    def length
+      8
     end
 
     def read(s, offset)
