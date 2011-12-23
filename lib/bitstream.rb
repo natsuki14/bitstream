@@ -147,6 +147,7 @@ module BitStream
       @fields = {}
       @types = types.dup
       @index = 0
+      @class_props = {}
       @bitstream_mutex = Mutex.new
     end
 
@@ -157,6 +158,7 @@ module BitStream
     def initialize_instance(raw_data, instance)
       props = instance.bitspec_properties
       props.mode = :field_def
+      props.user_props.merge!(@class_props)
       @bitstream_mutex.synchronize do
         @instance = instance
 
@@ -220,6 +222,14 @@ module BitStream
       @instance.bitspec_properties.user_props
     end
 
+    def big_endian
+      @class_props[:big_endian] = true
+    end
+
+    def little_endian
+      @class_props[:big_endian] = false
+    end
+
     def self.add_type(type, name = nil, bs = self)
       bs.instance_eval do
         define_method(name) do |*args|
@@ -232,6 +242,7 @@ module BitStream
           props = @instance.bitspec_properties
           fields = props.fields
           queue = props.eval_queue
+          user_props = props.user_props
           
           case props.mode
           when :field_def
@@ -240,7 +251,7 @@ module BitStream
             if type.respond_to? :read
               type_instance = type
             else
-              type_instance = type.instance(*args)
+              type_instance = type.instance(user_props, *args)
             end
             field = Value.new(type_instance, props.raw_data)
             queue.enq(field)
@@ -272,6 +283,9 @@ module BitStream
       name = name.intern
       type_name = type_name.intern
       type = @types[type_name]
+      props = @instance.bitspec_properties
+      queue = props.eval_queue
+      user_props = props.user_props
 
       if type.nil?
         raise BitStreamError, "There is no type named \"#{type_name}\""
@@ -283,11 +297,8 @@ module BitStream
         end
         type_instance = type
       else
-        type_instance = type.instance(*type_args)
+        type_instance = type.instance(user_props, *type_args)
       end
-
-      props = @instance.bitspec_properties
-      queue = props.eval_queue
 
       name_ = name
       case props.mode
@@ -316,6 +327,10 @@ module BitStream
       name = name.intern
       type_name = type_name.intern
       type = @types[type_name]
+      props = @instance.bitspec_properties
+      fields = props.fields
+      queue = props.eval_queue
+      user_props = props.user_props
 
       if type.nil?
         raise BitStreamError, "There is no type named \"#{type_name}\""
@@ -327,12 +342,9 @@ module BitStream
         end
         type_instance = type
       else
-        type_instance = type.instance *type_args
+        type_instance = type.instance(user_props, *type_args)
       end
 
-      props = @instance.bitspec_properties
-      fields = props.fields
-      queue = props.eval_queue
       name_ = name
       case props.mode
       when :field_def
@@ -344,7 +356,6 @@ module BitStream
         queue.enq(field)
 
         name_ = name
-        instance = @instance
         
         define_method name do
           return fields[name_]
@@ -370,11 +381,11 @@ module BitStream
 
     register_types [UnsignedInt, Cstring, String, Char]
 
-    def create(s, *props)
-      create_with_offset(s, 0, *props)
+    def create(s, props = {})
+      create_with_offset(s, 0, props)
     end
 
-    def create_with_offset(s, offset, *props)
+    def create_with_offset(s, offset, props = {})
       klass = Class.new(self)
       instance = klass.new(s, offset)
       instance.bitspec_properties.user_props = props
@@ -385,6 +396,10 @@ module BitStream
     #def method_missing(name, *args)
       # TODO: Support methods like "int16" "uint1"
     #  super name, args
+    #end
+
+    #def instance(props)
+    #  NestWrapper.new(self, props)
     #end
 
     def read(s, offset)

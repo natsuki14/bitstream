@@ -2,18 +2,27 @@ module BitStream
 
   class UnsignedInt
 
-    @instances = Hash.new do |hash, key|
-      hash[key] = new key
+    @be_instances = Hash.new do |hash, key|
+      hash[key] = new(key, true)
     end
 
-    def self.instance(bit_width)
-      @instances[bit_width]
+    @le_instances = Hash.new do |hash, key|
+      hash[key] = new(key, false)
+    end
+
+    def self.instance(props, bit_width)
+      if props[:big_endian]
+        @be_instances[bit_width]
+      else
+        @le_instances[bit_width]
+      end
     end
 
     attr_reader :bit_width
 
-    def initialize(bit_width)
+    def initialize(bit_width, big_endian)
       @bit_width = bit_width
+      @big_endian = big_endian
     end
 
     def length

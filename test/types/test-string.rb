@@ -4,28 +4,28 @@ require 'types/string'
 class TestString < Test::Unit::TestCase
 
   def test_aligned_read
-    type = BitStream::String.new(3)
+    type = BitStream::String.instance({}, 3)
     val, len = type.read("foobarbaz", 16)
     assert_equal("oba", val)
     assert_equal(3 * 8, len)
   end
 
   def test_aligned_write
-    type = BitStream::String.new(3)
+    type = BitStream::String.instance({}, 3)
     val = "foobarbaz"
     ret = type.write(val, 24, "qux")
     assert_equal("fooquxbaz", val)
   end
 
   def test_unaligned_read
-    type = BitStream::String.new(2)
+    type = BitStream::String.instance({}, 2)
     val, len = type.read([0x12345678].pack('N'), 1)
     assert_equal("\x24\x68", val)
     assert_equal(2 * 8, len)
   end
 
   def test_unaligned_write
-    type = BitStream::String.new(2)
+    type = BitStream::String.instance({}, 2)
     val = "\x12\x34"
     ret = type.write(val, 7, "\xcd\xef")
 

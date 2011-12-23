@@ -4,7 +4,7 @@ module BitStream
 
     @instance = new
 
-    def self.instance
+    def self.instance(props)
       @instance
     end
 

@@ -16,7 +16,7 @@ module BitStream
 
   class String
 
-    def self.instance(byte_len)
+    def self.instance(props, byte_len)
       new byte_len
     end
 

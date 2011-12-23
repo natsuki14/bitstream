@@ -6,8 +6,8 @@ class HavingProps
   include BitStream
 
   fields do
-    unsigned_int :u1, props[0]
-    unsigned_int :u2, props[1]
+    unsigned_int :u1, props[:lengths][0]
+    unsigned_int :u2, props[:lengths][1]
   end
 
 end
@@ -15,7 +15,7 @@ end
 class TestSimpleProperties < Test::Unit::TestCase
 
   def setup
-    @spec = HavingProps.create "\x01\x02\x03\x04", 24, 8
+    @spec = HavingProps.create "\x01\x02\x03\x04", lengths: [24, 8]
   end
 
   def test_u1
