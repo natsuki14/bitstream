@@ -212,11 +212,11 @@ module BitStream
             
             define_method name do
               #STDERR.puts "Read the field \"#{name_}\""
-              if fields[name_].value.nil?
+              if field.value.nil?
                 self.class.read_one_field(field, self)
               end
               #STDERR.puts "type(#{name_})=#{fields[name_].type}"
-              fields[name_].value
+              field.value
             end
 
             instance = @instance
@@ -255,17 +255,17 @@ module BitStream
       name_ = name
       case props.mode
       when :field_def
-        fields[name_] = ArrayProxy.new(@instance, self.class)
+        field = ArrayProxy.new(@instance, self.class)
         size.times do
-          field = Value.new(type_instance, props.raw_data)
-          fields[name_].add_field(field)
-          queue.enq(field)
+          field_element = Value.new(type_instance, props.raw_data)
+          field.add_field(field_element)
+          queue.enq(field_element)
         end
 
         instance = @instance
 
         define_method name do
-          fields[name_]
+          field
         end
 
         singleton_class.instance_eval do
