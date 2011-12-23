@@ -16,8 +16,11 @@ module BitStream
       @bit_width = bit_width
     end
 
-    def fixed_length?
-      true
+    #def fixed_length?
+    #  true
+    #end
+    def length
+      @bit_width
     end
 
     def read(s, offset)
@@ -57,6 +60,8 @@ module BitStream
         i -= 1
       end
       s << tail
+
+      return @bit_width
     end
 
   end

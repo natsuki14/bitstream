@@ -18,14 +18,15 @@ module BitStream
 
     include RandomAccessible
 
-    def initialize(instance, bitstream_class)
+    def initialize(instance)
       @fields = []
       @instance = instance
-      @bitstream_class = bitstream_class
+      @size = 0
     end
 
     def add_field(field)
       @fields << field
+      @size += 1
     end
 
     def get_field(pos)
@@ -46,10 +47,14 @@ module BitStream
 
     def shrink(n)
       @fields.pop(n)
+      @size -= n
     end
+
+    attr_reader :size
 
   end
 
+  # TODO: Use data structure that enqueue and dequeue in O(1).
   class Queue < Array
 
     alias :enq :push
@@ -79,6 +84,7 @@ module BitStream
     def initialize(type, raw_data)
       @type = type
       @raw_data = raw_data
+      @length = @type.length if @type.respond_to? :length
     end
 
     def read
@@ -92,6 +98,17 @@ module BitStream
       end
       #STDERR.puts "Return the value \"#{@value}\""
       return @value
+    end
+
+    def decide_length
+      if @length.nil?
+        if @offset.nil?
+          raise "Has not been set offset."
+        else
+          @value, @length = @type.read(@raw_data, @offset)
+        end
+      end
+      return @length
     end
 
     attr_reader :length, :value
@@ -137,7 +154,8 @@ module BitStream
       while value.offset.nil?
         field = queue.deq
         field.offset = props.curr_offset
-        field.read if field.length.nil?
+        length = field.length
+        length = field.decide_length if length.nil?
         props.curr_offset += field.length
       end
       value.read
@@ -150,8 +168,9 @@ module BitStream
       
       queue.each do |field|
         field.offset = props.curr_offset
-        field.read if field.length.nil?
-        props.curr_offset += field.length
+        length = field.length
+        length = field.decide_length if length.nil?
+        props.curr_offset += length
       end
       queue.clear
     end
@@ -204,7 +223,6 @@ module BitStream
               type_instance = type.instance(*args)
             end
             field = Value.new(type_instance, props.raw_data)
-            fields[name] = field
             queue.enq(field)
             
             #STDERR.puts "Defined field \"#{name}\""
@@ -249,25 +267,23 @@ module BitStream
       end
 
       props = @instance.bitspec_properties
-      fields = props.fields
       queue = props.eval_queue
 
       name_ = name
       case props.mode
       when :field_def
-        field = ArrayProxy.new(@instance, self.class)
+        field = ArrayProxy.new(@instance)
         size.times do
           field_element = Value.new(type_instance, props.raw_data)
           field.add_field(field_element)
           queue.enq(field_element)
         end
 
-        instance = @instance
-
         define_method name do
           field
         end
 
+        instance = @instance
         singleton_class.instance_eval do
           define_method name do
             instance.send(name_)
@@ -301,26 +317,17 @@ module BitStream
       case props.mode
       when :field_def
         if fields[name_].nil?
-          fields[name_] = []
+          fields[name_] = ArrayProxy.new(@instance)
         end
         field = Value.new(type_instance, props.raw_data)
-        fields[name_] << field
+        fields[name_].add_field(field)
         queue.enq(field)
 
         name_ = name
         instance = @instance
         
         define_method name do
-          ret = []
-          fields[name_].each do |el|
-            if @bitspec_properties.mode == :field_def
-              self.class.read_one_field(field, instance)
-              ret << el.value
-            else
-              ret << el.value unless el.value.nil?
-            end
-          end
-          return ret
+          return fields[name_]
         end
 
         instance = @instance
