@@ -139,14 +139,6 @@ module BitStream
         field.offset = props.curr_offset
         field.read if field.length.nil?
         props.curr_offset += field.length
-        # TODO: Add an error handler.
-        #begin
-          #STDERR.puts "Resuming the fiber."
-        #  props.fibers[0].resume
-        #rescue FiberError => e
-        #  STDERR.puts "Caught a FiberError (#{e.to_s})."
-        #  props.fibers.shift
-        #end
       end
       value.read
     end
@@ -162,13 +154,6 @@ module BitStream
         props.curr_offset += field.length
       end
       queue.clear
-      #until props.fibers.empty?
-      #  begin
-      #    props.fibers[0].resume
-      #  rescue FiberError
-      #    props.fibers.shift
-      #  end
-      #end
     end
 
     def self.types
@@ -240,17 +225,6 @@ module BitStream
                 instance.send(name_)
               end
             end
-          
-            #TODO: Change the name of this mode.
-          when :read
-            #STDERR.puts "The offset of the field #{name} is #{props.curr_offset}."
-            fields[name].offset = props.curr_offset
-            fields[name].read if fields[name].length.nil?
-            props.curr_offset += fields[name].length
-            
-            #STDERR.puts "Calculate offset of the field \"#{name}\". The offset is #{fields[name].offset}"
-            
-            Fiber.yield
           end
         end
       end
@@ -299,17 +273,6 @@ module BitStream
             instance.send(name_)
           end
         end
-      when :read
-        size.times do |i|
-          # TODO: Implement delayed eval.
-          value = fields[name].get_field(i)
-
-          value.offset = props.curr_offset
-          value.read if value.length.nil?
-          props.curr_offset += value.length
-        end
-
-        Fiber.yield
       end
     end
 
@@ -366,17 +329,6 @@ module BitStream
             instance.send(name_)
           end
         end
-      when :read
-        # Get the current field.
-        value = fields[name].find do |el|
-          el.value.nil?
-        end
-
-        value.offset = props.curr_offset
-        value.read if value.length.nil?
-        props.curr_offset += value.length
-
-        Fiber.yield
       end
     end
 
