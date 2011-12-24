@@ -10,11 +10,19 @@ module BitStream
       hash[key] = new(key, false)
     end
 
+    BE_SYMBOLS = [:big_endian, :be, :msb_first, :motorola, nil]
+    LE_SYMBOLS = [:little_endian, :le, :lsb_first, :intel]
+
     def self.instance(props, bit_width)
-      if props[:big_endian]
+      byte_order = props[:byte_order]
+      if BE_SYMBOLS.include?(byte_order)
         @be_instances[bit_width]
-      else
+      elsif LE_SYMBOLS.include?(byte_order)
         @le_instances[bit_width]
+      else
+        STDERR.puts("Unknown byte order #{byte_order.inspect}.",
+                    "Assuming that the byte order is big endian.")
+        @be_instances[bit_width]
       end
     end
 
@@ -35,10 +43,14 @@ module BitStream
       bitoffset  = offset % 8
       bytelength = (@bit_width + bitoffset + 7) / 8
 
-      bytelength.times do |i|
+      bytes = s[byteoffset, bytelength].unpack('C*')
+      bytes.reverse! unless @big_endian
+
+      bytes.each do |b|
         value <<= 8
-        value |= s[i + byteoffset].unpack('C')[0]
+        value |= b
       end
+
       value &= ~(-1 << (bytelength * 8 - bitoffset))
       value >>= (8 - (@bit_width + bitoffset) % 8) % 8
 
@@ -50,7 +62,10 @@ module BitStream
       bitoffset  = offset % 8
 
       if bitoffset != 0
-        throw "#{self.class.name} has not supported non-byte-aligned fields yet."
+        raise "#{self.class.name}#write has not supported non-byte-aligned fields yet."
+      end
+      unless @big_endian
+        raise "#{self.class.name}#write has not supported little endian yet."
       end
 
       i = 0

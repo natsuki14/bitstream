@@ -40,7 +40,7 @@ module BitStream
       unless @updated[pos]
         field = @fields[pos]
         unless field.has_read?
-          @instance.class.read_one_field(field, @instance)
+          BitStream.read_one_field(field, @instance)
         end
         @values[pos] = field.value
         @fields[pos] = nil
@@ -94,8 +94,37 @@ module BitStream
 
   end
 
+  def self.read_one_field(value, instance)
+    #STDERR.puts "Try to read the field \"#{name}\""
+    props = instance.bitspec_properties
+    queue = props.eval_queue
+    
+    #p props.fields[name]
+    while value.offset.nil?
+      field = queue.deq
+      field.offset = props.curr_offset
+      length = field.length
+      length = field.decide_length if length.nil?
+      props.curr_offset += field.length
+    end
+    value.read
+  end
+  
+  def self.index_all_fields(instance)
+    props = instance.bitspec_properties
+    queue = props.eval_queue
+    
+    queue.each do |field|
+      field.offset = props.curr_offset
+      length = field.length
+      length = field.decide_length if length.nil?
+      props.curr_offset += length
+    end
+    queue.clear
+  end
+  
   class Value
-
+    
     def initialize(type, raw_data)
       @type = type
       @raw_data = raw_data
@@ -168,34 +197,6 @@ module BitStream
       end
     end
 
-    def read_one_field(value, instance)
-      #STDERR.puts "Try to read the field \"#{name}\""
-      props = instance.bitspec_properties
-      queue = props.eval_queue
-
-      #p props.fields[name]
-      while value.offset.nil?
-        field = queue.deq
-        field.offset = props.curr_offset
-        length = field.length
-        length = field.decide_length if length.nil?
-        props.curr_offset += field.length
-      end
-      value.read
-    end
-
-    def index_all_fields(instance)
-      props = instance.bitspec_properties
-      queue = props.eval_queue
-      
-      queue.each do |field|
-        field.offset = props.curr_offset
-        length = field.length
-        length = field.decide_length if length.nil?
-        props.curr_offset += length
-      end
-      queue.clear
-    end
 
     def self.types
       @types
@@ -222,12 +223,8 @@ module BitStream
       @instance.bitspec_properties.user_props
     end
 
-    def big_endian
-      @class_props[:big_endian] = true
-    end
-
-    def little_endian
-      @class_props[:big_endian] = false
+    def byte_order(order)
+      @class_props[:byte_order] = order.intern
     end
 
     def self.add_type(type, name = nil, bs = self)
@@ -258,11 +255,11 @@ module BitStream
             
             #STDERR.puts "Defined field \"#{name}\""
             name_ = name
-            
+
             define_method name do
               #STDERR.puts "Read the field \"#{name_}\""
               if field.value.nil?
-                self.class.read_one_field(field, self)
+                BitStream.read_one_field(field, self)
               end
               #STDERR.puts "type(#{name_})=#{fields[name_].type}"
               field.value
@@ -429,7 +426,7 @@ module BitStream
   end
 
   def length
-    self.class.index_all_fields(self)
+    BitStream.index_all_fields(self)
     props = @bitspec_properties
     props.curr_offset - props.initial_offset
   end
