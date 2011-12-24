@@ -41,8 +41,7 @@ class TestSimpleInt < Test::Unit::TestCase
     @spec = SimpleIntBe.create "\x10\x20\x30\x40\x50\x60\x70\x80foobar\00\xfebazdummy"
 
     # dummy
-    SimpleIntBe.create "\x10\x20\x30\x40\x50\x60\x70\x80foobar\00\xfebazdummy",
-                       dummy: true
+    dummy = SimpleIntBe.create "\x10\x20\x30\x40\x50\x60\x70\x80foobar\00\xfebazdummy"
 
     @spec_le = SimpleIntLe.create "\x10\x20\x30\x40\x50\x60\x70\x80foobar\00\xfebazdummy"
   end

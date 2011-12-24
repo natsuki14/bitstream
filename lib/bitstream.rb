@@ -98,7 +98,7 @@ module BitStream
     #STDERR.puts "Try to read the field \"#{name}\""
     props = instance.bitspec_properties
     queue = props.eval_queue
-    
+
     #p props.fields[name]
     while value.offset.nil?
       field = queue.deq
@@ -252,11 +252,13 @@ module BitStream
             end
             field = Value.new(type_instance, props.raw_data)
             queue.enq(field)
-            
+            @instance.bitspec_properties.fields[name] = field
+
             #STDERR.puts "Defined field \"#{name}\""
             name_ = name
 
             define_method name do
+              field = bitspec_properties.fields[name_]
               #STDERR.puts "Read the field \"#{name_}\""
               if field.value.nil?
                 BitStream.read_one_field(field, self)
