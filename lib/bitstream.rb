@@ -379,6 +379,7 @@ module BitStream
     end
 
     register_types [UnsignedInt, Cstring, String, Char]
+    alias :unsigned :unsigned_int
 
     def create(s, props = {})
       create_with_offset(s, 0, props)
