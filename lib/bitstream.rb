@@ -96,7 +96,7 @@ module BitStream
 
   def self.read_one_field(value, instance)
     #STDERR.puts "Try to read the field \"#{name}\""
-    props = instance.bitspec_properties
+    props = instance.bitstream_properties
     queue = props.eval_queue
 
     #p props.fields[name]
@@ -111,7 +111,7 @@ module BitStream
   end
   
   def self.index_all_fields(instance)
-    props = instance.bitspec_properties
+    props = instance.bitstream_properties
     queue = props.eval_queue
     
     queue.each do |field|
@@ -185,7 +185,7 @@ module BitStream
     end
 
     def initialize_instance(raw_data, instance)
-      props = instance.bitspec_properties
+      props = instance.bitstream_properties
       props.mode = :field_def
       props.user_props.merge!(@class_props)
       @bitstream_mutex.synchronize do
@@ -220,7 +220,7 @@ module BitStream
     end
 
     def props
-      @instance.bitspec_properties.user_props
+      @instance.bitstream_properties.user_props
     end
 
     def byte_order(order)
@@ -236,7 +236,7 @@ module BitStream
           #  throw "#{name} has already defined."
           #end
           
-          props = @instance.bitspec_properties
+          props = @instance.bitstream_properties
           fields = props.fields
           queue = props.eval_queue
           user_props = props.user_props
@@ -252,13 +252,13 @@ module BitStream
             end
             field = Value.new(type_instance, props.raw_data)
             queue.enq(field)
-            @instance.bitspec_properties.fields[name] = field
+            @instance.bitstream_properties.fields[name] = field
 
             #STDERR.puts "Defined field \"#{name}\""
             name_ = name
 
             define_method name do
-              field = bitspec_properties.fields[name_]
+              field = bitstream_properties.fields[name_]
               #STDERR.puts "Read the field \"#{name_}\""
               if field.value.nil?
                 BitStream.read_one_field(field, self)
@@ -282,7 +282,7 @@ module BitStream
       name = name.intern
       type_name = type_name.intern
       type = @types[type_name]
-      props = @instance.bitspec_properties
+      props = @instance.bitstream_properties
       queue = props.eval_queue
       user_props = props.user_props
 
@@ -326,7 +326,7 @@ module BitStream
       name = name.intern
       type_name = type_name.intern
       type = @types[type_name]
-      props = @instance.bitspec_properties
+      props = @instance.bitstream_properties
       fields = props.fields
       queue = props.eval_queue
       user_props = props.user_props
@@ -387,7 +387,7 @@ module BitStream
     def create_with_offset(s, offset, props = {})
       klass = Class.new(self)
       instance = klass.new(s, offset)
-      instance.bitspec_properties.user_props = props
+      instance.bitstream_properties.user_props = props
       initialize_instance(s, instance)
       return instance
     end
@@ -424,12 +424,12 @@ module BitStream
     props.raw_data = s
     props.initial_offset = offset
     props.eval_queue = Queue.new
-    @bitspec_properties = props
+    @bitstream_properties = props
   end
 
   def length
     BitStream.index_all_fields(self)
-    props = @bitspec_properties
+    props = @bitstream_properties
     props.curr_offset - props.initial_offset
   end
 
@@ -437,6 +437,6 @@ module BitStream
     # Method to override.
   end
 
-  attr_accessor :bitspec_properties
+  attr_accessor :bitstream_properties
 
 end
