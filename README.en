@@ -1,0 +1,5 @@
+= BitStream
+
+== Future Work
+* Support little endian fields which are not byte-aligned.
+* Inherit properties to nested type.
