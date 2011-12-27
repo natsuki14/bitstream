@@ -1,6 +1,6 @@
 module BitStream
 
-  class UnsignedInt
+  class Unsigned
 
     @be_instances = Hash.new do |hash, key|
       hash[key] = new(key, true)
@@ -83,6 +83,42 @@ module BitStream
       s << tail
 
       return @bit_width
+    end
+
+  end
+
+  class Signed
+
+    @instances = Hash.new do |hash, key|
+      hash[key] = new(key)
+    end
+
+    def self.instance(props, bit_width)
+      unsigned = Unsigned.instance(props, bit_width)
+      return @instances[unsigned]
+    end
+
+    def initialize(unsigned)
+      @unsigned = unsigned
+    end
+
+    def length
+      @unsigned.length
+    end
+
+    def read(s, offset)
+      val, len = @unsigned.read(s, offset)
+      mask = -1 << (len - 1)
+      if (val & mask) != 0
+        val |= mask
+      end
+      return [val, len]
+    end
+
+    def write(s, offset, value)
+      mask = ~(-1 << len)
+      value &= mask
+      return @unsigned.write(s, offset, value)
     end
 
   end

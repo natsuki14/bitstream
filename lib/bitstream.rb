@@ -215,8 +215,13 @@ module BitStream
       
       @types = {} if @types.nil?
       @types[name] = type
-      
+
       add_type(type, name, self)
+    end
+
+    def self.alias_type(alias_name, aliasee)
+      @types[alias_name] = @types[aliasee]
+      alias_method(alias_name, aliasee)
     end
 
     def props
@@ -378,8 +383,9 @@ module BitStream
       ClassMethods.add_type(type, name, self.singleton_class)
     end
 
-    register_types [UnsignedInt, Cstring, String, Char]
-    alias :unsigned :unsigned_int
+    register_types [Unsigned, Signed, Cstring, String, Char]
+    alias_type :unsigned_int, :unsigned
+    alias_type :int, :signed
 
     def create(s, props = {})
       create_with_offset(s, 0, props)
