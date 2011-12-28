@@ -1,7 +1,20 @@
 # -*- coding: utf-8 -*-
 
+= BitStream
+
+BitStreamは、画像や音楽、動画ファイルなどのビットストリームのデータ構造を記述するためのDSLです。BitStreamでは、データ構造の定義中であっても、すでに定義したデータ構造の内容を参照することができます。この機能により、例えば、ヘッダ中に本体のデータ長が含まれているようなデータ構造を簡単に記述することができます。
+
+== インストール
+
+gem install bitstream
+
 == 留意事項
 クラスに設定されたプロパティは、インスタンスごとに設定されたプロパティを
 上書きします。クラスのプロパティでデフォルト値を決めて、インスタンスの設定で
 上書きするような使い方はできないので注意してください。
 （ネストされたクラスに、上位のクラスのプロパティが影響しないようにするための処置です）
+
+== ライセンス
+
+This library is distributed under the dual license of the Ruby license (in the narrow sense) and the 2-clause BSD license. Please see http://www.ruby-lang.org and BSDL.
+Copyright (c) 2011, Natsuki Kawai.
