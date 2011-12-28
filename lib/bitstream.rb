@@ -84,10 +84,10 @@ module BitStream
       @props = props
     end
 
-    #def length
+    def length
       # TODO: Implement me.
-    #  false
-    #end
+      nil
+    end
 
     def read(s, offset)
       instance = @type.create_with_offset(s, offset, @props)
@@ -127,7 +127,7 @@ module BitStream
       field.offset = props.curr_offset
       length = field.length
       length = field.decide_length if length.nil?
-      props.curr_offset += field.length
+      props.curr_offset += length
     end
     value.read
   end
