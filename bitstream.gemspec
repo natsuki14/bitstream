@@ -12,7 +12,7 @@ EOS
   s.version    = '0.0.1'
   s.author     = 'Natsuki Kawai'
   s.email      = 'natsuki.kawai@gmail.com'
-  s.licenses   = ["Ruby's", 'BSD']
+  s.licenses   = ["Ruby's", '2-clause BSDL']
   s.required_ruby_version = '>= 1.9.1'
   s.add_runtime_dependency 'random-accessible', '>= 0.2.0'
   s.homepage = 'https://github.com/natsuki14/bitstream'
