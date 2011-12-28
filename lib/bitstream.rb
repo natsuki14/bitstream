@@ -77,6 +77,28 @@ module BitStream
 
   end
 
+  class NestWrapper
+
+    def initialize(type, props)
+      @type = type
+      @props = props
+    end
+
+    #def length
+      # TODO: Implement me.
+    #  false
+    #end
+
+    def read(s, offset)
+      instance = @type.create_with_offset(s, offset, @props)
+      [instance, instance.length]
+    end
+
+    #def write(s, offset, data)
+      # TODO: Implement me.
+    #end
+  end
+
   module Utils
 
     def self.class2symbol(type)
@@ -404,18 +426,9 @@ module BitStream
     #  super name, args
     #end
 
-    #def instance(props)
-    #  NestWrapper.new(self, props)
-    #end
-
-    def read(s, offset)
-      instance = create_with_offset(s, offset)
-      [instance, instance.length]
+    def instance(props)
+      NestWrapper.new(self, props)
     end
-    
-    #def write(s, offset, data)
-      # TODO: Implement me.
-    #end
     
   end
 
