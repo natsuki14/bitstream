@@ -1,16 +1,9 @@
-require 'types/string-utils'
+# Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
+# Copyright:: Copyright 2011 Natsuki Kawai
+# License:: 2-clause BSDL or Ruby's
 
-# Used to debug.
-#class String
-#  def to_bin
-#    ret = ''
-#    each_byte do |byte|
-#      ret << byte.to_s(2)
-#    end
-#    ret = '0' * (8 - ret.size % 8) + ret if ret.size % 8 != 0
-#    ret
-#  end
-#end
+
+require 'types/string-utils'
 
 module BitStream
 

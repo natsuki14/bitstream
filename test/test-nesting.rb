@@ -1,3 +1,8 @@
+# Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
+# Copyright:: Copyright 2011 Natsuki Kawai
+# License:: 2-clause BSDL or Ruby's
+
+
 require 'test/unit'
 require 'bitstream'
 
@@ -9,10 +14,6 @@ class Nested
     unsigned_int "u1", 8
     unsigned_int :u2, 8
   end
-
-  #def length
-  #  16
-  #end
 
 end
 
@@ -26,10 +27,6 @@ class Nesting
     unsigned_int "u1", 8
     nested       "n"
     unsigned_int :u2, 8
-  end
-
-  def length
-    32
   end
 
 end

@@ -1,3 +1,8 @@
+# Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
+# Copyright:: Copyright 2011 Natsuki Kawai
+# License:: 2-clause BSDL or Ruby's
+
+
 require 'test/unit'
 require 'bitstream'
 
@@ -24,7 +29,7 @@ class TestCondition < Test::Unit::TestCase
     assert_equal(0, spec.u1)
     assert_equal(1, spec.u2)
   end
-  
+
   def test_condition_false
     spec = ConditionSample.create "\x00\x00\x00\x01\x00\x00\x00\x01"
     assert_equal(1, spec.u1)
@@ -41,6 +46,5 @@ class TestCondition < Test::Unit::TestCase
       spec.u2
     end
   end
-  
-end
 
+end

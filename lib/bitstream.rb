@@ -1,3 +1,7 @@
+# Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
+# Copyright:: Copyright 2011 Natsuki Kawai
+# License:: 2-clause BSDL or Ruby's
+
 require 'random-accessible'
 
 require 'types/integer'
