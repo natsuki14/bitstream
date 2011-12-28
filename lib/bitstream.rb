@@ -79,9 +79,10 @@ module BitStream
 
   class NestWrapper
 
-    def initialize(type, props)
+    def initialize(type, inherited_props, user_props)
       @type = type
-      @props = props
+      # TODO: Implement priority between the properties.
+      @props = user_props.merge(inherited_props)
     end
 
     def length
@@ -117,11 +118,9 @@ module BitStream
   end
 
   def self.read_one_field(value, instance)
-    #STDERR.puts "Try to read the field \"#{name}\""
     props = instance.bitstream_properties
     queue = props.eval_queue
 
-    #p props.fields[name]
     while value.offset.nil?
       field = queue.deq
       field.offset = props.curr_offset
@@ -159,7 +158,6 @@ module BitStream
     end
 
     def read
-      #STDERR.puts "Reading... (offset: #{@offset})"
       unless @has_read
         if @offset.nil?
           raise "Has not been set offset."
@@ -168,7 +166,6 @@ module BitStream
           @has_read = true
         end
       end
-      #STDERR.puts "Return the value \"#{@value}\""
       return @value
     end
 
@@ -186,7 +183,6 @@ module BitStream
     end
 
     attr_reader :length, :value
-    attr_accessor :type # For debugging.
     attr_accessor :offset
 
   end
@@ -258,9 +254,8 @@ module BitStream
       bs.instance_eval do
         define_method(name) do |*args|
           name = args.shift.intern
-          #puts "A field (#{name}@#{type}) was called with mode #{@mode}, self #{self}, args #{args}."        
           #if respond_to? name
-          #  throw "#{name} has already defined."
+          #  raise "#{name} has already defined."
           #end
           
           props = @instance.bitstream_properties
@@ -270,8 +265,6 @@ module BitStream
           
           case props.mode
           when :field_def
-            #STDERR.puts "Generated a new value."
-            #p types
             if type.respond_to? :read
               type_instance = type
             else
@@ -281,23 +274,20 @@ module BitStream
             queue.enq(field)
             @instance.bitstream_properties.fields[name] = field
 
-            #STDERR.puts "Defined field \"#{name}\""
-            name_ = name
+            name_in_method = name
 
             define_method name do
-              field = bitstream_properties.fields[name_]
-              #STDERR.puts "Read the field \"#{name_}\""
+              field = bitstream_properties.fields[name_in_method]
               if field.value.nil?
                 BitStream.read_one_field(field, self)
               end
-              #STDERR.puts "type(#{name_})=#{fields[name_].type}"
               field.value
             end
 
             instance = @instance
             singleton_class.instance_eval do
-              define_method name_ do
-                instance.send(name_)
+              define_method name_in_method do
+                instance.send(name_in_method)
               end
             end
           end
@@ -326,7 +316,6 @@ module BitStream
         type_instance = type.instance(user_props, *type_args)
       end
 
-      name_ = name
       case props.mode
       when :field_def
         field = ArrayProxy.new(@instance)
@@ -340,10 +329,11 @@ module BitStream
           field
         end
 
+        name_in_method = name
         instance = @instance
         singleton_class.instance_eval do
           define_method name do
-            instance.send(name_)
+            instance.send(name_in_method)
           end
         end
       end
@@ -371,26 +361,25 @@ module BitStream
         type_instance = type.instance(user_props, *type_args)
       end
 
-      name_ = name
       case props.mode
       when :field_def
-        if fields[name_].nil?
-          fields[name_] = ArrayProxy.new(@instance)
+        if fields[name].nil?
+          fields[name] = ArrayProxy.new(@instance)
         end
         field = Value.new(type_instance, props.raw_data)
-        fields[name_].add_field(field)
+        fields[name].add_field(field)
         queue.enq(field)
 
-        name_ = name
+        name_in_method = name
         
         define_method name do
-          return fields[name_]
+          return fields[name_in_method]
         end
 
         instance = @instance
         singleton_class.instance_eval do
           define_method name do
-            instance.send(name_)
+            instance.send(name_in_method)
           end
         end
       end
@@ -400,7 +389,6 @@ module BitStream
       if name.nil?
         name = Utils.class2symbol(type)
       end
-      puts "Add #{type.name} as #{name}"
       @types[name] = type
       ClassMethods.add_type(type, name, self.singleton_class)
     end
@@ -426,8 +414,8 @@ module BitStream
     #  super name, args
     #end
 
-    def instance(props)
-      NestWrapper.new(self, props)
+    def instance(inherited_props, user_props = {})
+      NestWrapper.new(self, inherited_props, user_props)
     end
     
   end
@@ -453,9 +441,9 @@ module BitStream
     props.curr_offset - props.initial_offset
   end
 
-  def properties=(props)
+  #def properties=(props)
     # Method to override.
-  end
+  #end
 
   attr_accessor :bitstream_properties
 
