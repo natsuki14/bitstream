@@ -280,12 +280,14 @@ module BitStream
 
             name_in_method = name
 
-            define_method name do
-              field = bitstream_properties.fields[name_in_method]
-              if field.value.nil?
-                BitStream.read_one_field(field, self)
+            @instance.singleton_class.instance_eval do
+              define_method name do
+                field = bitstream_properties.fields[name_in_method]
+                if field.value.nil?
+                  BitStream.read_one_field(field, self)
+                end
+                field.value
               end
-              field.value
             end
 
             instance = @instance
@@ -329,8 +331,10 @@ module BitStream
           queue.enq(field_element)
         end
 
-        define_method name do
-          field
+        @instance.singleton_class.instance_eval do
+          define_method name do
+            field
+          end
         end
 
         name_in_method = name
@@ -376,8 +380,10 @@ module BitStream
 
         name_in_method = name
         
-        define_method name do
-          return fields[name_in_method]
+        @instance.singleton_class.instance_eval do
+          define_method name do
+            return fields[name_in_method]
+          end
         end
 
         instance = @instance
