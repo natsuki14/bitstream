@@ -1,5 +1,5 @@
 # Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
-# Copyright:: Copyright 2011 Natsuki Kawai
+# Copyright:: Copyright (c) 2011, 2012 Natsuki Kawai
 # License:: 2-clause BSDL or Ruby's
 
 require 'random-accessible'
@@ -148,7 +148,7 @@ module BitStream
     queue.clear
   end
   
-  class Value
+  class FieldReader
     
     def initialize(type, raw_data)
       @type = type
@@ -274,7 +274,7 @@ module BitStream
             else
               type_instance = type.instance(user_props, *args)
             end
-            field = Value.new(type_instance, props.raw_data)
+            field = FieldReader.new(type_instance, props.raw_data)
             queue.enq(field)
             @instance.bitstream_properties.fields[name] = field
 
@@ -326,7 +326,7 @@ module BitStream
       when :field_def
         field = ArrayProxy.new(@instance)
         size.times do
-          field_element = Value.new(type_instance, props.raw_data)
+          field_element = FieldReader.new(type_instance, props.raw_data)
           field.add_field(field_element)
           queue.enq(field_element)
         end
@@ -374,7 +374,7 @@ module BitStream
         if fields[name].nil?
           fields[name] = ArrayProxy.new(@instance)
         end
-        field = Value.new(type_instance, props.raw_data)
+        field = FieldReader.new(type_instance, props.raw_data)
         fields[name].add_field(field)
         queue.enq(field)
 
