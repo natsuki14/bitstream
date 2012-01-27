@@ -1,5 +1,5 @@
 # Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
-# Copyright:: Copyright 2012 Natsuki Kawai
+# Copyright:: Copyright (c) 2012 Natsuki Kawai
 # License:: 2-clause BSDL or Ruby's
 
 require 'test/unit'

@@ -147,7 +147,32 @@ module BitStream
     end
     queue.clear
   end
-  
+
+  class ReaderArray
+
+    def initialize
+      @array = []
+      @read  = []
+    end
+
+    def [](pos)
+      unless @read[pos]
+        @read[pos] = true
+        reader = @array[pos]
+        if reader.value.nil?
+          reader.read
+        end
+        @array[pos] = reader.value
+      end
+      return @array[pos]
+    end
+
+    def <<(reader)
+      @array << reader
+    end
+
+  end
+
   class FieldReader
     
     def initialize(type, raw_data)
@@ -276,13 +301,13 @@ module BitStream
             end
             field = FieldReader.new(type_instance, props.raw_data)
             queue.enq(field)
-            @instance.bitstream_properties.fields[name] = field
+            #@instance.bitstream_properties.fields[name] = field
 
             name_in_method = name
 
             @instance.singleton_class.instance_eval do
               define_method name do
-                field = bitstream_properties.fields[name_in_method]
+                #field = bitstream_properties.fields[name_in_method]
                 if field.value.nil?
                   BitStream.read_one_field(field, self)
                 end
