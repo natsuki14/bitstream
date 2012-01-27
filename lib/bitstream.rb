@@ -199,7 +199,29 @@ module BitStream
       @types = types.dup
       @index = 0
       @class_props = {}
+      @class_props_chain = [@class_props]
       @bitstream_mutex = Mutex.new
+    end
+
+    # Currently BitStream does not support inheritance.
+    if false
+      def on_inherit(types, chain, fields, mutex)
+        @field_defs = []
+        @fields = fields
+        @types = types
+        @index = 0
+        @class_props = {}
+        @class_props_chain = [@class_props]
+        @class_props_chain.concat(chain)
+        @bitstream_mutex = mutex
+      end
+      
+      def inherited(subclass)
+        subclass.on_inherit(@types, @class_props_chain, @fields, @bitstream_mutex)
+        def subclass.fields
+          raise NameError, "Cannot define fields on a subclass of a class includes BitStream."
+        end
+      end
     end
 
     def fields(&field_def)
@@ -209,7 +231,9 @@ module BitStream
     def initialize_instance(raw_data, instance)
       props = instance.bitstream_properties
       props.mode = :field_def
-      props.user_props.merge!(@class_props)
+      @class_props_chain.each do |class_props|
+        props.user_props.merge!(class_props)
+      end
       @bitstream_mutex.synchronize do
         @instance = instance
 
@@ -218,7 +242,6 @@ module BitStream
         end
       end
     end
-
 
     def self.types
       @types
