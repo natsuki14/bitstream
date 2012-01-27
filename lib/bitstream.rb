@@ -1,5 +1,5 @@
 # Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
-# Copyright:: Copyright 2011 Natsuki Kawai
+# Copyright:: Copyright (c) 2011, 2012 Natsuki Kawai
 # License:: 2-clause BSDL or Ruby's
 
 require 'random-accessible'
@@ -147,8 +147,33 @@ module BitStream
     end
     queue.clear
   end
-  
-  class Value
+
+  class ReaderArray
+
+    def initialize
+      @array = []
+      @read  = []
+    end
+
+    def [](pos)
+      unless @read[pos]
+        @read[pos] = true
+        reader = @array[pos]
+        if reader.value.nil?
+          reader.read
+        end
+        @array[pos] = reader.value
+      end
+      return @array[pos]
+    end
+
+    def <<(reader)
+      @array << reader
+    end
+
+  end
+
+  class FieldReader
     
     def initialize(type, raw_data)
       @type = type
@@ -297,15 +322,15 @@ module BitStream
             else
               type_instance = type.instance(user_props, *args)
             end
-            field = Value.new(type_instance, props.raw_data)
+            field = FieldReader.new(type_instance, props.raw_data)
             queue.enq(field)
-            @instance.bitstream_properties.fields[name] = field
+            #@instance.bitstream_properties.fields[name] = field
 
             name_in_method = name
 
             @instance.singleton_class.instance_eval do
               define_method name do
-                field = bitstream_properties.fields[name_in_method]
+                #field = bitstream_properties.fields[name_in_method]
                 if field.value.nil?
                   BitStream.read_one_field(field, self)
                 end
@@ -349,7 +374,7 @@ module BitStream
       when :field_def
         field = ArrayProxy.new(@instance)
         size.times do
-          field_element = Value.new(type_instance, props.raw_data)
+          field_element = FieldReader.new(type_instance, props.raw_data)
           field.add_field(field_element)
           queue.enq(field_element)
         end
@@ -397,7 +422,7 @@ module BitStream
         if fields[name].nil?
           fields[name] = ArrayProxy.new(@instance)
         end
-        field = Value.new(type_instance, props.raw_data)
+        field = FieldReader.new(type_instance, props.raw_data)
         fields[name].add_field(field)
         queue.enq(field)
 
