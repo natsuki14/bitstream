@@ -122,6 +122,11 @@ module BitStream
   end
 
   def self.read_one_field(value, instance)
+    index_one_field(value, instance)
+    value.read
+  end
+
+  def self.index_one_field(value, instance)
     props = instance.bitstream_properties
     queue = props.eval_queue
 
@@ -132,7 +137,6 @@ module BitStream
       length = field.decide_length if length.nil?
       props.curr_offset += length
     end
-    value.read
   end
   
   def self.index_all_fields(instance)
@@ -373,10 +377,22 @@ module BitStream
       case props.mode
       when :field_def
         field = ArrayProxy.new(@instance)
-        size.times do
-          field_element = FieldReader.new(type_instance, props.raw_data)
-          field.add_field(field_element)
-          queue.enq(field_element)
+
+        if size.respond_to?(:to_int) && size >= 0
+          size.times do
+            field_element = FieldReader.new(type_instance, props.raw_data)
+            field.add_field(field_element)
+            queue.enq(field_element)
+          end
+        else
+          BitStream.index_all_fields(@instance)
+          while props.curr_offset < props.raw_data.bytesize * 8
+            field_element = FieldReader.new(type_instance, props.raw_data)
+            field.add_field(field_element)
+            queue.enq(field_element)
+            BitStream.index_one_field(field_element, @instance)
+            #puts "curr_offset:#{props.curr_offset} bytesize:#{props.raw_data.bytesize}"
+          end
         end
 
         @instance.singleton_class.instance_eval do
