@@ -413,9 +413,11 @@ module BitStream
 
     def create_with_offset(s, offset, props = {})
       klass = Class.new(self)
-      instance = klass.new(s, offset)
+      instance = klass.new
+      instance.initialize_properties(s, offset)
       instance.bitstream_properties.user_props = props
       initialize_instance(s, instance)
+      instance.initialize_with_fields
       return instance
     end
 
@@ -435,7 +437,12 @@ module BitStream
     obj.initialize_for_class_methods(ClassMethods.types)
   end
 
-  def initialize(s, offset = 0)
+  def initialize_with_fields
+    # Nothing to do.
+    # Override me if you want to do anything after all fields has been defined.
+  end
+
+  def initialize_properties(s, offset = 0)
     props = Properties.new
     props.curr_offset = offset
     props.fields = {}
