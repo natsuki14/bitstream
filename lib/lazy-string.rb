@@ -4,6 +4,7 @@
 
 class LazyString
 
+  # TODO: change name of SubString.
   SubString = Struct.new(:start, :value)
 
   class LazySubString
@@ -44,6 +45,7 @@ class LazyString
     end
   end
 
+  # TODO: Add 'add' method to add a substring of a String.
   def <<(other)
     if other.respond_to?(:to_int)
       return self << ('' << other)

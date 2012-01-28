@@ -3,6 +3,7 @@
 # License:: 2-clause BSDL or Ruby's
 
 require 'random-accessible'
+require 'lazy-string'
 
 require 'types/integer'
 require 'types/string'
@@ -15,8 +16,14 @@ module BitStream
   end
 
   Properties = Struct.new(
-    :curr_offset, :fields, :mode, :raw_data,
-    :initial_offset, :user_props, :eval_queue
+    :curr_offset,
+    :fields,
+    :mode,
+    :raw_data,
+    :initial_offset,
+    :user_props,
+    :eval_queue,
+    :substreams
   )
 
   class ArrayProxy
@@ -152,6 +159,30 @@ module BitStream
     queue.clear
   end
 
+  class SubStreamPacket
+
+    def self.instance(length)
+      new length
+    end
+
+    def initialize(length)
+      if length % 8 != 0
+        raise NotImplementedError, "non-aligned substream has not been supported."
+      end
+      @length = length
+    end
+
+    attr_reader :length
+
+    def read(s, offset)
+      if offset % 8 != 0
+        raise NotImplementedError, "non-aligned substream has not been supported."
+      end
+      return [LazyString.new(s, offset / 8, @length / 8), @length]
+    end
+
+  end
+
   class ReaderArray
 
     def initialize
@@ -270,6 +301,14 @@ module BitStream
           field_def.call
         end
       end
+      substream_types = props.user_props[:substream_types]
+      substreams = props.substreams
+      unless substream_types.nil?
+        props.substreams.keys do |id|
+          # TODO: Support multi type of substream.
+          substreams[id] = substream_types[0].read(substreams[id])
+        end
+      end
     end
 
     def self.types
@@ -304,6 +343,10 @@ module BitStream
 
     def byte_order(order)
       @class_props[:byte_order] = order.intern
+    end
+
+    def substream_types(*types)
+      @class_props[:substream_types] = types
     end
 
     def self.add_type(type, name = nil, bs = self)
@@ -459,6 +502,28 @@ module BitStream
       end
     end
 
+    def substream(name, id, length)
+      name = name.intern
+      props = @instance.bitstream_properties
+      user_props = props.user_props
+      raw_data = props.raw_data
+      queue = props.eval_queue
+      substreams = @instance.bitstream_properties.substreams
+
+      case props.mode
+      when :field_def
+        type_instance = SubStreamPacket.instance(length)
+        field = FieldReader.new(type_instance, props.raw_data)
+        queue.enq(field)
+        BitStream.read_one_field(field, @instance)
+        substreams[id].last << field.value
+      end
+    end
+
+    def separate_substream(id)
+      @instance.bitstream_properties.substreams[id] << LazyString.new
+    end
+
     def add_type(type, name = nil)
       if name.nil?
         name = Utils.class2symbol(type)
@@ -513,6 +578,9 @@ module BitStream
     props.raw_data = s
     props.initial_offset = offset
     props.eval_queue = Queue.new
+    props.substreams = Hash.new do |hash, key|
+      hash[key] = []
+    end
     @bitstream_properties = props
   end
 
