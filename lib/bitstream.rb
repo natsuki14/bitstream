@@ -304,7 +304,7 @@ module BitStream
       substream_types = props.user_props[:substream_types]
       substreams = props.substreams
       unless substream_types.nil?
-        props.substreams.keys do |id|
+        substreams.keys.each do |id|
           # TODO: Support multi type of substream.
           substreams[id] = substream_types[0].read(substreams[id])
         end
@@ -420,7 +420,6 @@ module BitStream
       case props.mode
       when :field_def
         field = ArrayProxy.new(@instance)
-
         if size.respond_to?(:to_int) && size >= 0
           size.times do
             field_element = FieldReader.new(type_instance, props.raw_data)
@@ -588,6 +587,10 @@ module BitStream
     BitStream.index_all_fields(self)
     props = @bitstream_properties
     props.curr_offset - props.initial_offset
+  end
+
+  def substreams
+    @bitstream_properties.substreams.values
   end
 
   #def properties=(props)
