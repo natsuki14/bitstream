@@ -258,6 +258,7 @@ module BitStream
       @fields = {}
       @types = types.dup
       @index = 0
+      @singleton_props = {}
       @class_props = {}
       @class_props_chain = [@class_props]
       @bitstream_mutex = Mutex.new
@@ -301,7 +302,7 @@ module BitStream
           field_def.call
         end
       end
-      substream_types = props.user_props[:substream_types]
+      substream_types = @singleton_props[:substream_types]
       substreams = props.substreams
       unless substream_types.nil?
         substreams.keys.each do |id|
@@ -346,7 +347,7 @@ module BitStream
     end
 
     def substream_types(*types)
-      @class_props[:substream_types] = types
+      @singleton_props[:substream_types] = types
     end
 
     def self.add_type(type, name = nil, bs = self)
