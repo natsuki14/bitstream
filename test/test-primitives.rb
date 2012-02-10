@@ -13,12 +13,12 @@ class SimpleIntBe
   byte_order :big_endian
 
   fields {
-    unsigned_int "u1", 32
-    unsigned_int :u2, 32
-    cstring      "cs1"
-    unsigned_int "u3", 1
-    unsigned_int "u4", 7
-    string       :s1, 3
+    unsigned "u1", 32
+    uint32   :u2
+    cstring  "cs1"
+    unsigned "u3", 1
+    uint7    "u4"
+    string   :s1, 3
   }
 
 end

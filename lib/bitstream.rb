@@ -547,10 +547,19 @@ module BitStream
       return instance
     end
 
-    #def method_missing(name, *args)
-      # TODO: Support methods like "int16" "uint1"
-    #  super name, args
-    #end
+    def method_missing(name, *args)
+      name_s = name.to_s
+      field_name = args.shift
+      if name_s =~ /^uint(\d+)$/
+        bit_width = Regexp.last_match[1].to_i
+        unsigned field_name, bit_width, *args
+      elsif name_s =~ /^int(\d+)$/
+        bit_width = Regexp.last_match[1].to_i
+        signed field_name, bit_width, *args
+      else
+        super name, args
+      end
+    end
 
     def instance(inherited_props, user_props = {})
       NestWrapper.new(self, inherited_props, user_props)
