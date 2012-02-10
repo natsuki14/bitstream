@@ -53,7 +53,7 @@ module BitStream
       unless @updated[pos]
         field = @fields[pos]
         unless field.has_read?
-          BitStream.read_one_field(field, @instance)
+          field.read_one_field
         end
         @values[pos] = field.value
         @fields[pos] = nil
@@ -111,24 +111,6 @@ module BitStream
     #def write(s, offset, data)
       # TODO: Implement me.
     #end
-  end
-
-  def self.read_one_field(value, instance)
-    index_one_field(value, instance)
-    value.read
-  end
-
-  def self.index_one_field(value, instance)
-    props = instance.bitstream_properties
-    queue = props.eval_queue
-
-    while value.offset.nil?
-      field = queue.deq
-      field.offset = props.curr_offset
-      length = field.length
-      length = field.decide_length if length.nil?
-      props.curr_offset += length
-    end
   end
   
   def self.index_all_fields(instance)
@@ -195,13 +177,18 @@ module BitStream
 
   class FieldReader
     
-    def initialize(type, raw_data)
+    def initialize(type, instance)
       @type = type
-      @raw_data = raw_data
+      @instance = instance
       @length = @type.length if @type.respond_to? :length
       @has_read = false
     end
 
+    def props
+      @instance.bitstream_properties
+    end
+    private :props
+    
     def has_read?
       @has_read
     end
@@ -211,7 +198,7 @@ module BitStream
         if @offset.nil?
           raise "Has not been set offset."
         else
-          @value, @length = @type.read(@raw_data, @offset)
+          @value, @length = @type.read(props.raw_data, @offset)
           @has_read = true
         end
       end
@@ -224,11 +211,28 @@ module BitStream
         if @offset.nil?
           raise "Has not been set offset."
         else
-          @value, @length = @type.read(@raw_data, @offset)
+          @value, @length = @type.read(props.raw_data, @offset)
           @has_read = true
         end
       end
       return @length
+    end
+    
+    def read_one_field
+      index_one_field
+      read
+    end
+
+    def index_one_field
+      queue = props.eval_queue
+  
+      while @offset.nil?
+        field = queue.deq
+        field.offset = props.curr_offset
+        length = field.length
+        length = field.decide_length if length.nil?
+        props.curr_offset += length
+      end
     end
 
     attr_reader :length, :value
@@ -360,7 +364,7 @@ module BitStream
             else
               type_instance = type.instance(user_props, *args)
             end
-            field = FieldReader.new(type_instance, props.raw_data)
+            field = FieldReader.new(type_instance, @instance)
             queue.enq(field)
             #@instance.bitstream_properties.fields[name] = field
 
@@ -370,7 +374,7 @@ module BitStream
               define_method name do
                 #field = bitstream_properties.fields[name_in_method]
                 if field.value.nil?
-                  BitStream.read_one_field(field, self)
+                  field.read_one_field
                 end
                 field.value
               end
@@ -413,17 +417,17 @@ module BitStream
         field = ArrayProxy.new(@instance)
         if size.respond_to?(:to_int) && size >= 0
           size.times do
-            field_element = FieldReader.new(type_instance, props.raw_data)
+            field_element = FieldReader.new(type_instance, @instance)
             field.add_field(field_element)
             queue.enq(field_element)
           end
         else
           BitStream.index_all_fields(@instance)
           while props.curr_offset < props.raw_data.bytesize * 8
-            field_element = FieldReader.new(type_instance, props.raw_data)
+            field_element = FieldReader.new(type_instance, @instance)
             field.add_field(field_element)
             queue.enq(field_element)
-            BitStream.index_one_field(field_element, @instance)
+            field_element.index_one_field
             #puts "curr_offset:#{props.curr_offset} bytesize:#{props.raw_data.bytesize}"
           end
         end
@@ -471,7 +475,7 @@ module BitStream
         if fields[name].nil?
           fields[name] = ArrayProxy.new(@instance)
         end
-        field = FieldReader.new(type_instance, props.raw_data)
+        field = FieldReader.new(type_instance, @instance)
         fields[name].add_field(field)
         queue.enq(field)
 
@@ -504,9 +508,9 @@ module BitStream
       case props.mode
       when :field_def
         type_instance = SubStreamPacket.instance(length)
-        field = FieldReader.new(type_instance, props.raw_data)
+        field = FieldReader.new(type_instance, @instance)
         queue.enq(field)
-        BitStream.read_one_field(field, @instance)
+        field.read_one_field
         
         substreams[id] << LazyString.new if substreams[id].empty?
         substreams[id].last << field.value
