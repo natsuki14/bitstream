@@ -24,9 +24,9 @@ class LazyString
         raise NotImplementedError
       end
     end
-
+    
     def to_str
-      @value[@start, @size]
+      @value[@start, @size].to_str
     end
     alias :to_s :to_str
 
@@ -88,12 +88,20 @@ class LazyString
         return res
       end
     elsif args.respond_to?(:to_int)
-      raise NotImplementedError
+      warn "#{self.class.name}#[pos] has not implemented yet. Calling #{self.class.name}#to_str."
+      to_str[*args]
     else # args is one Range object.
-      raise NotImplementedError
+      warn "#{self.class.name}#[range] has not implemented yet. Calling #{self.class.name}#to_str."
+      to_str[*args]
     end
   end
   
+  def unpack(template)
+    # TODO: Optimize here.
+    # (Stop concat the front strings if template start with "x".)
+    to_str.unpack(template)
+  end
+    
   def to_str
     res = ''
     @chain.each do |substr|

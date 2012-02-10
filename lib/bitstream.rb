@@ -10,6 +10,8 @@ require 'types/string'
 require 'types/cstring'
 require 'types/character'
 
+require 'bitstream/utils'
+
 module BitStream
 
   class BitStreamError < Exception
@@ -109,23 +111,6 @@ module BitStream
     #def write(s, offset, data)
       # TODO: Implement me.
     #end
-  end
-
-  module Utils
-
-    def self.class2symbol(type)
-      name = type.name.split("::").last
-      name = self.camel2snake(name).intern
-    end
-
-    def self.camel2snake(camel)
-      snake = camel.dup
-      snake[0] = snake[0].downcase
-      snake.gsub(/[A-Z]/) do |s|
-        "_" + s.downcase
-      end
-    end
-
   end
 
   def self.read_one_field(value, instance)
@@ -292,9 +277,14 @@ module BitStream
     def initialize_instance(raw_data, instance)
       props = instance.bitstream_properties
       props.mode = :field_def
+      
+      user_props = props.user_props
+      
       @class_props_chain.each do |class_props|
-        props.user_props.merge!(class_props)
+        user_props.merge!(class_props)
       end
+      user_props[:nest_chain] = user_props[:nest_chain] + [instance]
+      
       @bitstream_mutex.synchronize do
         @instance = instance
 
@@ -306,8 +296,8 @@ module BitStream
       substreams = props.substreams
       unless substream_types.nil?
         substreams.keys.each do |id|
-          # TODO: Support multi type of substream.
-          substreams[id] = substream_types[0].read(substreams[id])
+          # TODO: Support multi type substreams.
+          substreams[id] = substream_types[0].instance.read(substreams[id])
         end
       end
     end
@@ -501,27 +491,33 @@ module BitStream
         end
       end
     end
-
+    
     def substream(name, id, length)
       name = name.intern
       props = @instance.bitstream_properties
       user_props = props.user_props
       raw_data = props.raw_data
       queue = props.eval_queue
-      substreams = @instance.bitstream_properties.substreams
-
+      top_stream = @instance.bitstream_properties.user_props[:nest_chain].first
+      substreams = top_stream.bitstream_properties.substreams
+      
       case props.mode
       when :field_def
         type_instance = SubStreamPacket.instance(length)
         field = FieldReader.new(type_instance, props.raw_data)
         queue.enq(field)
         BitStream.read_one_field(field, @instance)
+        
+        substreams[id] << LazyString.new if substreams[id].empty?
         substreams[id].last << field.value
       end
     end
 
     def separate_substream(id)
-      @instance.bitstream_properties.substreams[id] << LazyString.new
+      # TODO: Refactor here.
+      top_stream = @instance.bitstream_properties.user_props[:nest_chain].first
+      substreams = top_stream.bitstream_properties.substreams
+      substreams[id] << LazyString.new
     end
 
     def add_type(type, name = nil)
@@ -541,6 +537,7 @@ module BitStream
     end
 
     def create_with_offset(s, offset, props = {})
+      props[:nest_chain] = [] unless props.include?(:nest_chain)
       klass = Class.new(self)
       instance = klass.new
       instance.initialize_properties(s, offset)
