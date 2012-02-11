@@ -52,9 +52,6 @@ module BitStream
     def read_access(pos)
       unless @updated[pos]
         field = @fields[pos]
-        unless field.has_read?
-          field.read_one_field
-        end
         @values[pos] = field.value
         @fields[pos] = nil
         @updated[pos] = true
@@ -87,6 +84,8 @@ module BitStream
 
     alias :enq :push
     alias :deq :shift
+    alias :peek_front :first
+    alias :peek_back :last
 
   end
 
@@ -111,19 +110,6 @@ module BitStream
     #def write(s, offset, data)
       # TODO: Implement me.
     #end
-  end
-  
-  def self.index_all_fields(instance)
-    props = instance.bitstream_properties
-    queue = props.eval_queue
-    
-    queue.each do |field|
-      field.offset = props.curr_offset
-      length = field.length
-      length = field.decide_length if length.nil?
-      props.curr_offset += length
-    end
-    queue.clear
   end
 
   class SubStreamPacket
@@ -196,20 +182,21 @@ module BitStream
     def read
       unless @has_read
         if @offset.nil?
-          raise "Has not been set offset."
-        else
-          @value, @length = @type.read(props.raw_data, @offset)
-          @has_read = true
+          index
         end
+        @value, @length = @type.read(props.raw_data, @offset)
+        @has_read = true
       end
       return @value
     end
+    
+    alias :value :read
 
-    def decide_length
+    def length
       # @length must not be nil if @has_read.
       if @length.nil?
         if @offset.nil?
-          raise "Has not been set offset."
+          index
         else
           @value, @length = @type.read(props.raw_data, @offset)
           @has_read = true
@@ -217,25 +204,18 @@ module BitStream
       end
       return @length
     end
-    
-    def read_one_field
-      index_one_field
-      read
-    end
 
-    def index_one_field
+    def index
       queue = props.eval_queue
   
       while @offset.nil?
         field = queue.deq
         field.offset = props.curr_offset
         length = field.length
-        length = field.decide_length if length.nil?
         props.curr_offset += length
       end
     end
 
-    attr_reader :length, :value
     attr_accessor :offset
 
   end
@@ -366,16 +346,11 @@ module BitStream
             end
             field = FieldReader.new(type_instance, @instance)
             queue.enq(field)
-            #@instance.bitstream_properties.fields[name] = field
 
             name_in_method = name
 
             @instance.singleton_class.instance_eval do
               define_method name do
-                #field = bitstream_properties.fields[name_in_method]
-                if field.value.nil?
-                  field.read_one_field
-                end
                 field.value
               end
             end
@@ -422,12 +397,12 @@ module BitStream
             queue.enq(field_element)
           end
         else
-          BitStream.index_all_fields(@instance)
+          queue.peek_back.index unless queue.empty?
           while props.curr_offset < props.raw_data.bytesize * 8
             field_element = FieldReader.new(type_instance, @instance)
             field.add_field(field_element)
             queue.enq(field_element)
-            field_element.index_one_field
+            field_element.index
             #puts "curr_offset:#{props.curr_offset} bytesize:#{props.raw_data.bytesize}"
           end
         end
@@ -510,7 +485,7 @@ module BitStream
         type_instance = SubStreamPacket.instance(length)
         field = FieldReader.new(type_instance, @instance)
         queue.enq(field)
-        field.read_one_field
+        field.read
         
         substreams[id] << LazyString.new if substreams[id].empty?
         substreams[id].last << field.value
@@ -595,8 +570,9 @@ module BitStream
   end
 
   def length
-    BitStream.index_all_fields(self)
     props = @bitstream_properties
+    queue = props.eval_queue
+    queue.peek_back.index unless queue.empty?
     props.curr_offset - props.initial_offset
   end
 
