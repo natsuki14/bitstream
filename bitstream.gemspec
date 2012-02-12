@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.description = <<EOS
 BitStream is a mixin to write data structures of bit streams such as picture, music, movie files, and e.t.c.. You can refer contents of bit streams even when you are defining the data structures. With the function, you can write a data structure easily that the header contains the data length of the body field.
 EOS
-  s.version    = '0.0.2'
+  s.version    = '0.1.0'
   s.author     = 'Natsuki Kawai'
   s.email      = 'natsuki.kawai@gmail.com'
   s.licenses   = ["Ruby's", '2-clause BSDL']

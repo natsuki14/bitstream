@@ -65,6 +65,10 @@ gzip-viewer.rb: A viewer of the original file name of a gzip file.
     puts "The gzip does not contain its original file name."
   end
 
+== Documentation
+
+In preparation.
+
 == License
 
 This library is distributed under the dual license of the Ruby license (in the narrow sense) and the 2-clause BSD license. Please see http://www.ruby-lang.org and BSDL.
