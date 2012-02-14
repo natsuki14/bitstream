@@ -1,5 +1,5 @@
 # Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
-# Copyright:: Copyright 2011 Natsuki Kawai
+# Copyright:: Copyright 2011, 2012 Natsuki Kawai
 # License:: 2-clause BSDL or Ruby's
 
 
@@ -10,9 +10,9 @@ class TestString < Test::Unit::TestCase
 
   def test_aligned_read
     type = BitStream::String.instance({}, 3)
-    val, len = type.read("foobarbaz", 16)
-    assert_equal("oba", val)
-    assert_equal(3 * 8, len)
+    info = type.read("foobarbaz", 16)
+    assert_equal("oba", info[:value])
+    assert_equal(3 * 8, info[:length])
   end
 
   def test_aligned_write
@@ -24,9 +24,9 @@ class TestString < Test::Unit::TestCase
 
   def test_unaligned_read
     type = BitStream::String.instance({}, 2)
-    val, len = type.read([0x12345678].pack('N'), 1)
-    assert_equal("\x24\x68", val)
-    assert_equal(2 * 8, len)
+    info = type.read([0x12345678].pack('N'), 1)
+    assert_equal("\x24\x68", info[:value])
+    assert_equal(2 * 8, info[:length])
   end
 
   def test_unaligned_write

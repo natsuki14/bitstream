@@ -11,6 +11,7 @@ require 'types/cstring'
 require 'types/character'
 
 require 'bitstream/utils'
+require 'bitstream/field-info'
 
 module BitStream
 
@@ -104,7 +105,7 @@ module BitStream
 
     def read(s, offset)
       instance = @type.create_with_offset(s, offset, @props)
-      [instance, instance.length]
+      return FieldInfo.new(instance, instance.length)
     end
 
     #def write(s, offset, data)
@@ -184,10 +185,10 @@ module BitStream
         if @offset.nil?
           index
         end
-        @value, @length = @type.read(props.raw_data, @offset)
+        @info = @type.read(props.raw_data, @offset)
         @has_read = true
       end
-      return @value
+      return @info[:value]
     end
     
     alias :value :read
@@ -197,12 +198,13 @@ module BitStream
       if @length.nil?
         if @offset.nil?
           index
-        else
-          @value, @length = @type.read(props.raw_data, @offset)
-          @has_read = true
         end
+        @info = @type.read(props.raw_data, @offset)
+        @has_read = true
+        return @info[:length]
+      else
+        return @length
       end
-      return @length
     end
 
     def index

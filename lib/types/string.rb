@@ -1,8 +1,9 @@
 # Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
-# Copyright:: Copyright 2011 Natsuki Kawai
+# Copyright:: Copyright 2011, 2012 Natsuki Kawai
 # License:: 2-clause BSDL or Ruby's
 
 
+require 'bitstream/field-info'
 require 'types/string-utils'
 
 module BitStream
@@ -29,7 +30,7 @@ module BitStream
       Utils.bit_lshift(val, bitoffset)
       val.slice!(val.size - 1) if bitoffset != 0
 
-      [val, @byte_len * 8]
+      return FieldInfo.new(val, @byte_len * 8)
     end
 
     def write(s, offset, data)

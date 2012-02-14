@@ -1,7 +1,8 @@
 # Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
-# Copyright:: Copyright 2011 Natsuki Kawai
+# Copyright:: Copyright 2011, 2012 Natsuki Kawai
 # License:: 2-clause BSDL or Ruby's
 
+require 'bitstream/field-info'
 
 module BitStream
 
@@ -29,7 +30,7 @@ module BitStream
 
       bytelen = val.size
       val.slice!(val.size - 1)
-      return [val, 8 * bytelen]
+      return FieldInfo.new(val, 8 * bytelen)
     end
 
     def write(s, offset, data)

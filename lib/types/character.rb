@@ -1,11 +1,14 @@
 # Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
-# Copyright:: Copyright 2011 Natsuki Kawai
+# Copyright:: Copyright 2011, 2012 Natsuki Kawai
 # License:: 2-clause BSDL or Ruby's
 
+require 'bitstream/field-info'
 
 module BitStream
 
   class Char
+    
+    LENGTH = 8
 
     @instance = new
 
@@ -14,7 +17,7 @@ module BitStream
     end
 
     def length
-      8
+      LENGTH
     end
 
     def read(s, offset)
@@ -23,7 +26,7 @@ module BitStream
 
       value = s[byteoffset]
 
-      return [value, 8]
+      return FieldInfo.new(value, LENGTH)
     end
 
     def write(s, offset, value)

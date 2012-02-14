@@ -1,7 +1,8 @@
 # Author:: Natsuki Kawai (natsuki.kawai@gmail.com)
-# Copyright:: Copyright 2011 Natsuki Kawai
+# Copyright:: Copyright 2011, 2012 Natsuki Kawai
 # License:: 2-clause BSDL or Ruby's
 
+require 'bitstream/field-info'
 
 module BitStream
 
@@ -59,7 +60,7 @@ module BitStream
       value &= ~(-1 << (bytelength * 8 - bitoffset))
       value >>= (8 - (@bit_width + bitoffset) % 8) % 8
 
-      return [value, @bit_width]
+      return FieldInfo.new(value, @bit_width)
     end
 
     def write(s, offset, value)
@@ -112,12 +113,14 @@ module BitStream
     end
 
     def read(s, offset)
-      val, len = @unsigned.read(s, offset)
+      info = @unsigned.read(s, offset)
+      val = info[:value]
+      len = info[:length]
       mask = -1 << (len - 1)
       if (val & mask) != 0
         val |= mask
       end
-      return [val, len]
+      return FieldInfo.new(val, len)
     end
 
     def write(s, offset, value)
