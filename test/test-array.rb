@@ -21,7 +21,7 @@ class InfiniteArraySample
   include BitStream
 
   fields do
-    array :a1, nil, :unsigned_int, 16
+    array :a1, nil, :uint16
   end
 
 end

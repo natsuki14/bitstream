@@ -230,27 +230,6 @@ module BitStream
       @bitstream_mutex = Mutex.new
     end
 
-    # Currently BitStream does not support inheritance.
-    if false
-      def on_inherit(types, chain, fields, mutex)
-        @field_defs = []
-        @fields = fields
-        @types = types
-        @index = 0
-        @class_props = {}
-        @class_props_chain = [@class_props]
-        @class_props_chain.concat(chain)
-        @bitstream_mutex = mutex
-      end
-      
-      def inherited(subclass)
-        subclass.on_inherit(@types, @class_props_chain, @fields, @bitstream_mutex)
-        def subclass.fields
-          raise NameError, "Cannot define fields on a subclass of a class includes BitStream."
-        end
-      end
-    end
-
     def fields(&field_def)
       @field_defs << field_def
     end
@@ -574,6 +553,10 @@ module BitStream
   def substreams
     @bitstream_properties.substreams.values
   end
+  
+  #def field_info(name)
+  #  @bitstream_properties.field_info[]
+  #end
 
   #def properties=(props)
     # Method to override.

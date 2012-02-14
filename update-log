@@ -1,3 +1,7 @@
 0.1.0
 Supported arrays without length specification.
+Supported fields named like "uint32" and "int16".
 Supported parsing substreams.
+
+0.1.1
+Supported fields of arrays named like "uint32" and "int16".
