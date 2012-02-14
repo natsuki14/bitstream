@@ -167,8 +167,6 @@ module BitStream
     def initialize(type, instance)
       @type = type
       @instance = instance
-      @length = @type.length if @type.respond_to? :length
-      @has_read = false
     end
 
     def props
@@ -176,17 +174,12 @@ module BitStream
     end
     private :props
     
-    def has_read?
-      @has_read
-    end
-
     def read
-      unless @has_read
+      if @info.nil?
         if @offset.nil?
           index
         end
         @info = @type.read(props.raw_data, @offset)
-        @has_read = true
       end
       return @info[:value]
     end
@@ -194,16 +187,18 @@ module BitStream
     alias :value :read
 
     def length
+      length = @type.length
       # @length must not be nil if @has_read.
-      if @length.nil?
-        if @offset.nil?
-          index
+      if length.nil?
+        if @info.nil?
+          if @offset.nil?
+            index
+          end
+          @info = @type.read(props.raw_data, @offset)
         end
-        @info = @type.read(props.raw_data, @offset)
-        @has_read = true
         return @info[:length]
       else
-        return @length
+        return length
       end
     end
 
@@ -326,9 +321,9 @@ module BitStream
       @singleton_props[:substream_types] = types
     end
 
-    def self.add_type(type, name = nil, bs = self)
+    def self.add_type(type, method_name = nil, bs = self)
       bs.instance_eval do
-        define_method(name) do |*args|
+        define_method(method_name) do |*args|
           name = args.shift.intern
           #if respond_to? name
           #  raise "#{name} has already defined."
@@ -341,11 +336,7 @@ module BitStream
           
           case props.mode
           when :field_def
-            if type.respond_to? :read
-              type_instance = type
-            else
-              type_instance = type.instance(user_props, *args)
-            end
+            type_instance = get_type(method_name, user_props, *args)
             field = FieldReader.new(type_instance, @instance)
             queue.enq(field)
 
@@ -370,24 +361,11 @@ module BitStream
 
     def array(name, size, type_name, *type_args)
       name = name.intern
-      type_name = type_name.intern
-      type = @types[type_name]
       props = @instance.bitstream_properties
       queue = props.eval_queue
       user_props = props.user_props
 
-      if type.nil?
-        raise BitStreamError, "There is no type named \"#{type_name}\""
-      end
-
-      if type.respond_to? :read
-        unless type_args.empty?
-          raise BitStreamError, "#{type} does not accept any arguments."
-        end
-        type_instance = type
-      else
-        type_instance = type.instance(user_props, *type_args)
-      end
+      type_instance = get_type(type_name, user_props, *type_args)
 
       case props.mode
       when :field_def
@@ -427,25 +405,12 @@ module BitStream
 
     def dyn_array(name, type_name, *type_args)
       name = name.intern
-      type_name = type_name.intern
-      type = @types[type_name]
       props = @instance.bitstream_properties
       fields = props.fields
       queue = props.eval_queue
       user_props = props.user_props
 
-      if type.nil?
-        raise BitStreamError, "There is no type named \"#{type_name}\""
-      end
-
-      if type.respond_to? :read
-        unless type_args.empty?
-          raise BitStreamError, "#{type} does not accept any arguments."
-        end
-        type_instance = type
-      else
-        type_instance = type.instance(user_props, *type_args)
-      end
+      type_instance = get_type(type_name, user_props, *type_args)
 
       case props.mode
       when :field_def
@@ -529,21 +494,49 @@ module BitStream
     end
 
     def method_missing(name, *args)
-      name_s = name.to_s
       field_name = args.shift
-      if name_s =~ /^uint(\d+)$/
-        bit_width = Regexp.last_match[1].to_i
-        unsigned field_name, bit_width, *args
-      elsif name_s =~ /^int(\d+)$/
-        bit_width = Regexp.last_match[1].to_i
-        signed field_name, bit_width, *args
+      aliasee = resolve_alias(name, args)
+      args.unshift(field_name)
+      if aliasee.nil?
+        super name, *args
       else
-        super name, args
+        return send(aliasee, *args)
       end
     end
 
     def instance(inherited_props, user_props = {})
       NestWrapper.new(self, inherited_props, user_props)
+    end
+    
+    private
+    def resolve_alias(type_name, args)
+      type_s = type_name.to_s
+      if type_s =~ /^uint(\d+)$/
+        bit_width = Regexp.last_match[1].to_i
+        args.unshift(bit_width)
+        return :unsigned
+      elsif type_s =~ /^int(\d+)$/
+        bit_width = Regexp.last_match[1].to_i
+        args.unshift(bit_width)
+        return :signed
+      else
+        return nil
+      end
+    end
+    
+    def get_type(type_name, props, *args)
+      type = @types[type_name.intern]
+      
+      if type.nil?
+        aliasee = resolve_alias(type_name, args)
+        if aliasee.nil?
+          raise BitStreamError, "There is no type named \"#{type_name}\""
+        else
+          type = @types[aliasee]
+        end
+      end
+      
+      return type.instance(props, *args)
     end
     
   end
